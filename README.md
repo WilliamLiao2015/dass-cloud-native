@@ -191,7 +191,11 @@ Note: when running outside Docker, the database URL must use `localhost` instead
 
 ## Implementation Status
 
-The backend API, scheduler, and worker are fully functional. The frontend dashboard currently shows placeholder pages — the UI components are scaffolded but the interactive views (job list, job detail, job form) are to be implemented by the frontend team.
+This repository is a scaffold — the architecture, interfaces, models, schemas, tests, and infrastructure are all in place, but the business logic has been hollowed out for the team to implement.
+
+The frontend dashboard also shows placeholder pages — the three interactive views (jobs-list-page, job-detail-page, job-form-page) are scaffolded but not yet implemented.
+
+The provided test suite (tests/) serves as the acceptance criteria. Once your implementations replace the NotImplementedError stubs, the tests should pass.
 
 ## Notes
 
