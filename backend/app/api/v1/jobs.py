@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_worker_id
+from app.api.deps import get_db
 from app.queue.factory import get_queue_client
 from app.schemas.job import JobCreate, JobListItem, JobRead, JobUpdate, TriggerResponse
 from app.schemas.task import TaskRead
