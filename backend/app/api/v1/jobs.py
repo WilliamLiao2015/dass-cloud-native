@@ -52,7 +52,7 @@ def get_job(
 ):
     """取得單一 Job 詳細資料。
 
-    # service.get_job → JobRead.model_validate
+    service.get_job → JobRead.model_validate
     """
 
     job = service.get_job(job_id)
@@ -68,7 +68,7 @@ def update_job(
 ):
     """更新 Job 欄位。
 
-    # TODO: service.update_job → JobRead.model_validate
+    service.update_job → JobRead.model_validate
     """
 
     job = service.update_job(job_id, payload)
@@ -83,7 +83,7 @@ def delete_job(
 ):
     """刪除 Job。
 
-    # service.delete_job → return {"ok": True}
+    service.delete_job → return {"ok": True}
     """
 
     service.delete_job(job_id)
@@ -116,7 +116,7 @@ def list_job_tasks(
 ):
     """列出指定 Job 的 Task 歷史。
 
-    # service.list_job_tasks → 轉 TaskRead
+    service.list_job_tasks → 轉 TaskRead
     """
 
     tasks = service.list_job_tasks(job_id)
