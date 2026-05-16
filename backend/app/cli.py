@@ -5,6 +5,8 @@ import logging
 import sys
 import time
 
+from uuid import uuid4
+
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import SessionLocal
@@ -77,7 +79,7 @@ def run_worker() -> None:
                 # TODO: 
                 # 當 worker 一多，每個 worker 都跟唯一的 DB 建立連線，同時還有 scheduler 跟 api server，會造成 connection pool 很快就用光。
                 with SessionLocal() as db:
-                    service = WorkerService(db, queue_client)
+                    service = WorkerService(db, queue_client, worker_id=str(uuid4()))
                     service.process_task_id(task_id)
                 
                 queue_client.delete_message(message.receipt_handle)
