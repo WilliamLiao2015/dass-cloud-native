@@ -160,6 +160,7 @@ jobs:
           print("✅ SQS queues created")
           PY
         env:
+          DASS_SQS_ENDPOINT_URL: "http://localhost:4566"
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_DEFAULT_REGION: us-east-1
@@ -167,6 +168,8 @@ jobs:
 
       - name: Run DB migrations (Main DB)
         run: uv run alembic upgrade head
+        env:
+          DASS_DATABASE_URL: "postgresql+psycopg://dass:dass@localhost:5432/dass_test"
 
       - name: Run DB migrations (Scheduler DB)
         run: uv run alembic upgrade head
@@ -180,6 +183,11 @@ jobs:
             -v --tb=long \
             --override-ini="addopts=" \
             2>&1 | tee integration-results.txt
+        env:
+          DASS_DATABASE_URL: "postgresql+psycopg://dass:dass@localhost:5432/dass_test"
+          DASS_SCHEDULER_DB_URL: "postgresql+psycopg://dass:dass@localhost:5433/dass_scheduler"
+          DASS_DATABASE_REPLICA_URL: "postgresql+psycopg://dass:dass@localhost:5432/dass_test"
+          DASS_SQS_ENDPOINT_URL: "http://localhost:4566"
 
       - name: Integration summary
         if: always()
