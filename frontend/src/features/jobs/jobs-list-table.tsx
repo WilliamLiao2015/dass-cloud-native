@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import type { Job } from "../../types"
 import { formatActionConfig, formatDateTime } from "./jobs-list.utils"
 
@@ -43,12 +45,25 @@ export function JobsListTable({ jobs }: { jobs: Job[] }) {
                 <td className="px-4 py-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-fg">{job.name}</h3>
+                      <h3 className="font-semibold text-fg">
+                        <Link
+                          className="transition hover:text-accent"
+                          href={`/jobs/${job.id}`}
+                        >
+                          {job.name}
+                        </Link>
+                      </h3>
                       <JobBadge enabled={job.enabled} />
                     </div>
                     <div className="text-xs text-muted">
                       <span className="font-mono">{job.id}</span>
                     </div>
+                    <Link
+                      className="inline-flex text-xs font-medium text-accent transition hover:brightness-110"
+                      href={`/jobs/${job.id}`}
+                    >
+                      View details
+                    </Link>
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-muted">
