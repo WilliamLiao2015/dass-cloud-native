@@ -1,4 +1,4 @@
-import type { Job, Task } from "../types"
+import type { Job, JobListParams, JobListResponse, Task } from "../types"
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -18,9 +18,39 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+function withQuery(
+  path: string,
+  params?: Record<string, string | number | boolean | undefined>
+) {
+  if (!params) {
+    return path
+  }
+
+  const searchParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") {
+      continue
+    }
+    searchParams.set(key, String(value))
+  }
+
+  const query = searchParams.toString()
+  return query ? `${path}?${query}` : path
+}
+
 export const api = {
   health: () => request<{ status: string }>("/health"),
-  listJobs: () => request<Job[]>("/api/v1/jobs"),
+  listJobs: (params: JobListParams = {}) =>
+    request<JobListResponse>(
+      withQuery("/api/v1/jobs", {
+        page: params.page,
+        page_size: params.page_size,
+        enabled: params.enabled,
+        action_type: params.action_type,
+        concurrency_policy: params.concurrency_policy,
+        q: params.q,
+      })
+    ),
   getJob: (id: string) => request<Job>(`/api/v1/jobs/${id}`),
   createJob: (payload: unknown) =>
     request<Job>("/api/v1/jobs", {

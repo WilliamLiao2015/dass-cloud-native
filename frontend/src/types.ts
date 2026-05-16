@@ -21,6 +21,23 @@ export interface Job {
   updated_at: string
 }
 
+export interface JobListResponse {
+  items: Job[]
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
+
+export interface JobListParams {
+  page?: number
+  page_size?: number
+  enabled?: boolean
+  action_type?: ActionType
+  concurrency_policy?: ConcurrencyPolicy
+  q?: string // search query for job name
+}
+
 export interface Task {
   id: string
   job_id: string
