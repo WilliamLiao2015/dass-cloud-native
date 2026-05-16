@@ -5,7 +5,7 @@
   "singleQuote": false,
   "singleAttributePerLine": true,
   "trailingComma": "es5",
-  "tailwindStylesheet": "src/index.css",
+  "tailwindStylesheet": "src/styles.css",
   "tailwindFunctions": ["cn", "cva"],
   "tabWidth": 2,
   "useTabs": false,
