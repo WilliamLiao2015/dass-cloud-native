@@ -172,7 +172,7 @@ class JobService:
         try:
             job = self.get_job(job_id)
 
-            assert job.id == job_id
+            assert str(job.id) == str(job_id)
         except (HTTPException, AssertionError):
             raise HTTPException(status_code=404, detail="Job not found")
 
