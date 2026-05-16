@@ -36,7 +36,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className="w-80 rounded-2xl border border-sky-400/20 bg-slate-950/90 p-4 shadow-glow backdrop-blur"
+            className="w-80 rounded-2xl border border-sky-400/20 bg-slate-950/90 p-4 shadow-glow backdrop-blur-sm"
           >
             <div className="flex items-start justify-between gap-3">
               <div>

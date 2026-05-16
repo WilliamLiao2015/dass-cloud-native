@@ -11,7 +11,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full text-slate-100">
       <div className="mx-auto flex min-h-full max-w-7xl flex-col px-4 py-6 lg:px-8">
-        <header className="mb-6 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-5 py-4 shadow-glow backdrop-blur">
+        <header className="mb-6 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-5 py-4 shadow-glow backdrop-blur-sm">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-sky-300">
               dass

@@ -7,7 +7,7 @@ export default function JobDetailPage({ jobId }: { jobId: string }) {
       <h2 className="text-lg font-semibold">Job Detail</h2>
       <p className="mt-2 text-sm text-slate-400">
         Detail view for job{" "}
-        <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-sky-300">
+        <code className="rounded-sm bg-white/10 px-1.5 py-0.5 text-xs text-sky-300">
           {jobId}
         </code>{" "}
         is not yet implemented.
