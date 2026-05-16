@@ -264,7 +264,7 @@ def test_api_job_crud_on_postgres(main_db, monkeypatch):
 
             resp = client.get("/api/v1/jobs")
             assert resp.status_code == 200
-            assert any(j["id"] == job_id for j in resp.json())
+            assert any(j["id"] == job_id for j in resp.json()["items"])
 
             resp = client.delete(f"/api/v1/jobs/{job_id}")
             assert resp.status_code == 200
