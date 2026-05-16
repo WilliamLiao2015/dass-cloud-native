@@ -69,8 +69,10 @@ class JobListItem(BaseModel):
     name: str
     cron_expression: str
     action_type: str
+    action_config: dict[str, Any]
     enabled: bool
     concurrency_policy: str
+    max_retries: int
     next_fire_at: datetime
     created_at: datetime
     updated_at: datetime
