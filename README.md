@@ -189,6 +189,16 @@ npm run dev
 
 Note: when running outside Docker, the database URL must use `localhost` instead of `postgres`, and the SQS endpoint must use `localhost` instead of `localstack`.
 
+### Using `act` for Local CI
+
+You can use the `act` tool to run GitHub Actions workflows locally. This is useful for testing the integration tests without pushing to GitHub.
+
+You need to have the `act` tool installed and configured with your GitHub token. Then you can run:
+
+```bash
+act push -s GITHUB_TOKEN="$(gh auth token)" --artifact-server-path /tmp/artifacts
+```
+
 ## Implementation Status
 
 This repository is a scaffold — the architecture, interfaces, models, schemas, tests, and infrastructure are all in place, but the business logic has been hollowed out for the team to implement.
