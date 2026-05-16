@@ -9,26 +9,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const isActive = (path: string) =>
     pathname === path || pathname?.startsWith(`${path}/`)
   return (
-    <div className="min-h-full text-slate-100">
+    <div className="min-h-full text-fg">
       <div className="mx-auto flex min-h-full max-w-7xl flex-col px-4 py-6 lg:px-8">
-        <header className="mb-6 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-5 py-4 shadow-glow backdrop-blur-sm">
+        <header className="mb-6 flex items-center justify-between rounded-3xl border border-line bg-panel px-5 py-4 shadow-glow backdrop-blur-sm">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-sky-300">
+            <p className="text-xs uppercase tracking-[0.35em] text-accent">
               dass
             </p>
             <h1 className="text-xl font-semibold">
               Distributed Asynchronous Scheduling System
             </h1>
           </div>
-          <nav className="flex gap-4 text-sm text-slate-300">
+          <nav className="flex gap-4 text-sm text-muted">
             <Link
-              className={isActive("/jobs") ? "text-white" : ""}
+              className={isActive("/jobs") ? "text-fg" : ""}
               href="/jobs"
             >
               Jobs
             </Link>
             <Link
-              className={isActive("/jobs/new") ? "text-white" : ""}
+              className={isActive("/jobs/new") ? "text-fg" : ""}
               href="/jobs/new"
             >
               Create Job

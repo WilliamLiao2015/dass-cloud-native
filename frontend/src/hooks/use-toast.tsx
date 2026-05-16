@@ -36,19 +36,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className="w-80 rounded-2xl border border-sky-400/20 bg-slate-950/90 p-4 shadow-glow backdrop-blur-sm"
+            className="w-80 rounded-2xl border border-line bg-panel p-4 shadow-glow backdrop-blur-sm"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-semibold text-white">{toast.title}</p>
+                <p className="font-semibold text-fg">{toast.title}</p>
                 {toast.description ? (
-                  <p className="mt-1 text-sm text-slate-300">
-                    {toast.description}
-                  </p>
+                  <p className="mt-1 text-sm text-muted">{toast.description}</p>
                 ) : null}
               </div>
               <button
-                className="text-slate-400"
+                className="text-muted"
                 onClick={() => remove(toast.id)}
               >
                 ×
