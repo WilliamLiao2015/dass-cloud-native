@@ -1,4 +1,4 @@
-import type { ActionType } from "../../types"
+import type { ActionType } from "../../../types"
 
 export type EnabledFilter = "all" | "enabled" | "disabled"
 export type ActionTypeFilter = "all" | ActionType

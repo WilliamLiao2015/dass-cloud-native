@@ -3,7 +3,7 @@
 import { JobDetailContent } from "./job-detail-content"
 import { JobDetailError } from "./job-detail-error"
 import { JobDetailLoading } from "./job-detail-loading"
-import { useJobDetailPage } from "./use-job-detail-page"
+import { useJobDetailPage } from "../_hooks/use-job-detail-page"
 
 export default function JobDetailPage({ jobId }: { jobId: string }) {
   const { deleteMutation, job, jobQuery, tasks, tasksQuery, triggerMutation } =

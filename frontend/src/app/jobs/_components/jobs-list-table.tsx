@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 
-import type { Job } from "../../types"
-import { formatActionConfig, formatDateTime } from "./jobs-list.utils"
+import type { Job } from "../../../types"
+import { formatActionConfig, formatDateTime } from "../_lib/jobs-list.utils"
 
 function JobBadge({ enabled }: { enabled: boolean }) {
   return (

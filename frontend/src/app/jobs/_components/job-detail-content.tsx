@@ -1,6 +1,6 @@
 "use client"
 
-import type { Job } from "../../types"
+import type { Job } from "../../../types"
 import { JobDetailHeader } from "./job-detail-header"
 import { JobDetailOverview } from "./job-detail-overview"
 import { JobTaskList } from "./job-task-list"

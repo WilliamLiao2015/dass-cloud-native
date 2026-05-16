@@ -1,6 +1,6 @@
 "use client"
 
-import type { ActionTypeFilter, EnabledFilter } from "./jobs-list.types"
+import type { ActionTypeFilter, EnabledFilter } from "../_lib/jobs-list.types"
 
 export function JobsListFilters({
   actionTypeFilter,

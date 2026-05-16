@@ -3,8 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
-import { api } from "../../api/client"
-import { useToast } from "../../hooks/use-toast"
+import { api } from "../../../api/client"
+import { useToast } from "../../../hooks/use-toast"
 
 export function useJobDetailPage(jobId: string) {
   const router = useRouter()

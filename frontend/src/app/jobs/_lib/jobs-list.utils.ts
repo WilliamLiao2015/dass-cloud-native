@@ -1,4 +1,4 @@
-import type { Job } from "../../types"
+import type { Job } from "../../../types"
 
 export function formatDateTime(value: string) {
   const date = new Date(value)

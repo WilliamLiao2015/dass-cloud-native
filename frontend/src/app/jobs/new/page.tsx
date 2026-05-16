@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 
-import JobFormPage from "../../../features/jobs/job-form-page"
+import JobFormPage from "../_components/job-form-page"
 
 export default function NewJobRoute() {
   return (

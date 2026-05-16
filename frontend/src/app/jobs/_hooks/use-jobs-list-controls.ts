@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 
-import { DEFAULT_JOB_LIST_PAGE_SIZE } from "./jobs-list.types"
-import type { ActionTypeFilter, EnabledFilter } from "./jobs-list.types"
+import { DEFAULT_JOB_LIST_PAGE_SIZE } from "../_lib/jobs-list.types"
+import type { ActionTypeFilter, EnabledFilter } from "../_lib/jobs-list.types"
 
 export function useJobsListControls() {
   const [page, setPage] = useState(1)

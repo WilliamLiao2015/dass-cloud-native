@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
 
-import { api } from "../../api/client"
-import { useToast } from "../../hooks/use-toast"
-import type { ActionType, ConcurrencyPolicy, Job } from "../../types"
+import { api } from "../../../api/client"
+import { useToast } from "../../../hooks/use-toast"
+import type { ActionType, ConcurrencyPolicy, Job } from "../../../types"
 
 type JobFormState = {
   name: string

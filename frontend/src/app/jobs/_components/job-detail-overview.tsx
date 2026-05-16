@@ -1,6 +1,6 @@
 "use client"
 
-import { formatDateTime } from "./jobs-list.utils"
+import { formatDateTime } from "../_lib/jobs-list.utils"
 
 function formatActionConfig(actionConfig: Record<string, unknown>) {
   const entries = Object.entries(actionConfig ?? {})

@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 
-import JobDetailPage from "../../../features/jobs/job-detail-page"
-import JobFormPage from "../../../features/jobs/job-form-page"
+import JobDetailPage from "../_components/job-detail-page"
+import JobFormPage from "../_components/job-form-page"
 
 export default async function JobDetailRoute({
   params,
