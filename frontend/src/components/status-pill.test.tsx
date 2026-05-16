@@ -1,20 +1,21 @@
-import React from "react";
-import { describe, expect, it } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
-import { StatusPill } from "./status-pill";
+import React from "react"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it } from "vitest"
+
+import { StatusPill } from "./status-pill"
 
 describe("StatusPill", () => {
   it("renders the expected tone for known statuses", () => {
-    const markup = renderToStaticMarkup(<StatusPill status="success" />);
+    const markup = renderToStaticMarkup(<StatusPill status="success" />)
 
-    expect(markup).toContain("success");
-    expect(markup).toContain("bg-emerald-500/20");
-  });
+    expect(markup).toContain("success")
+    expect(markup).toContain("bg-emerald-500/20")
+  })
 
   it("falls back to the default tone for unknown statuses", () => {
-    const markup = renderToStaticMarkup(<StatusPill status="mystery" />);
+    const markup = renderToStaticMarkup(<StatusPill status="mystery" />)
 
-    expect(markup).toContain("mystery");
-    expect(markup).toContain("bg-white/10");
-  });
-});
+    expect(markup).toContain("mystery")
+    expect(markup).toContain("bg-white/10")
+  })
+})

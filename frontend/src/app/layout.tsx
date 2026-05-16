@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import { Providers } from "./providers";
-import { DashboardShell } from "../components/dashboard-shell";
-import "../styles.css";
+import type { Metadata } from "next"
+import type { ReactNode } from "react"
+
+import { DashboardShell } from "../components/dashboard-shell"
+import "../styles.css"
+import { Providers } from "./providers"
 
 export const metadata: Metadata = {
   title: "dass",
   description: "Distributed Asynchronous Scheduling System",
-};
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -18,5 +19,5 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Providers>
       </body>
     </html>
-  );
+  )
 }
