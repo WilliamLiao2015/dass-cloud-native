@@ -133,14 +133,37 @@ jobs:
 
       - name: Create SQS queues
         run: |
-          aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name dass-tasks --region us-east-1
-          aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name dass-tasks-normal --region us-east-1
-          aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name dass-tasks-retry --region us-east-1
-          echo "✅ SQS queues created"
+          uv run python - <<'PY'
+          import os
+          import boto3
+
+          endpoint_url = os.environ["DASS_SQS_ENDPOINT_URL"]
+          region = os.environ["DASS_AWS_REGION"]
+          queue_names = [
+              os.environ["DASS_QUEUE_NAME"],
+              os.environ["DASS_QUEUE_NAME_NORMAL"],
+              os.environ["DASS_QUEUE_NAME_RETRY"],
+          ]
+
+          client = boto3.client(
+              "sqs",
+              endpoint_url=endpoint_url,
+              region_name=region,
+              aws_access_key_id=os.environ["DASS_AWS_ACCESS_KEY_ID"],
+              aws_secret_access_key=os.environ["DASS_AWS_SECRET_ACCESS_KEY"],
+          )
+
+          for queue_name in queue_names:
+              response = client.create_queue(QueueName=queue_name)
+              print(f"Created queue: {queue_name} -> {response['QueueUrl']}")
+
+          print("✅ SQS queues created")
+          PY
         env:
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_DEFAULT_REGION: us-east-1
+          AWS_EC2_METADATA_DISABLED: "true"
 
       - name: Run DB migrations (Main DB)
         run: uv run alembic upgrade head
