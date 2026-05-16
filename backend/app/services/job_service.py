@@ -53,13 +53,33 @@ class JobService:
 
         return self.jobs.create(job)
 
-    def list_jobs(self) -> list[Job]:
-        """列出所有 Job。
+    def list_jobs(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        enabled: bool | None = None,
+        action_type: str | None = None,
+        concurrency_policy: str | None = None,
+        q: str | None = None,
+    ) -> tuple[list[Job], int]:
+        """列出 Job，支援分頁與篩選。"""
+        jobs = self.jobs.list()
 
-        直接呼叫 self.jobs.list()
-        """
+        if enabled is not None:
+            jobs = [job for job in jobs if job.enabled is enabled]
+        if action_type is not None:
+            jobs = [job for job in jobs if job.action_type == action_type]
+        if concurrency_policy is not None:
+            jobs = [job for job in jobs if job.concurrency_policy == concurrency_policy]
+        if q:
+            needle = q.lower()
+            jobs = [job for job in jobs if needle in job.name.lower()]
 
-        return self.jobs.list()
+        total = len(jobs)
+        start = (page - 1) * page_size
+        end = start + page_size
+        return jobs[start:end], total
 
     def get_job(self, job_id: str) -> Job:
         """取得單一 Job，不存在則 raise 404。

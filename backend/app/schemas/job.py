@@ -78,6 +78,14 @@ class JobListItem(BaseModel):
     updated_at: datetime
 
 
+class JobListResponse(BaseModel):
+    items: list[JobListItem]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+
+
 class TriggerResponse(BaseModel):
     task_id: str
     status: str
