@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query"
 
 import { api } from "../../../api/client"
+import { useJobsListControls } from "../_hooks/use-jobs-list-controls"
+import { getJobsRange } from "../_lib/jobs-list.utils"
 import { JobsListEmpty } from "./jobs-list-empty"
 import { JobsListError } from "./jobs-list-error"
 import { JobsListFilters } from "./jobs-list-filters"
@@ -10,8 +12,6 @@ import { JobsListHeader } from "./jobs-list-header"
 import { JobsListLoading } from "./jobs-list-loading"
 import { JobsListPagination } from "./jobs-list-pagination"
 import { JobsListTable } from "./jobs-list-table"
-import { getJobsRange } from "../_lib/jobs-list.utils"
-import { useJobsListControls } from "../_hooks/use-jobs-list-controls"
 
 export default function JobsListPage() {
   const {
