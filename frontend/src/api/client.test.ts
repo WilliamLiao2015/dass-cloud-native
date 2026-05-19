@@ -52,6 +52,31 @@ describe("request", () => {
 
     await expect(request("/api/v1/jobs")).rejects.toThrow("backend exploded")
   })
+
+  it("merges caller headers with the default content type", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "ok" }),
+    }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await request("/api/v1/jobs", {
+      headers: {
+        Authorization: "Bearer token",
+      },
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/jobs",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          authorization: "Bearer token",
+        }),
+      })
+    )
+  })
 })
 
 describe("api", () => {
@@ -74,6 +99,35 @@ describe("api", () => {
           "Content-Type": "application/json",
         }),
       })
+    )
+  })
+
+  it("builds list job query strings from the provided filters", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        items: [],
+        page: 2,
+        page_size: 25,
+        total: 0,
+        total_pages: 0,
+      }),
+    }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await api.listJobs({
+      page: 2,
+      page_size: 25,
+      enabled: false,
+      action_type: "shell",
+      concurrency_policy: "replace",
+      q: "",
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/jobs?page=2&page_size=25&enabled=false&action_type=shell&concurrency_policy=replace",
+      expect.any(Object)
     )
   })
 })

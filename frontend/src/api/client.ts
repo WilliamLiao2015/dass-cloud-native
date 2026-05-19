@@ -1,12 +1,16 @@
 import type { Job, JobListParams, JobListResponse, Task } from "../types"
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const requestHeaders = Object.fromEntries(
+    new Headers(init?.headers ?? undefined)
+  )
+
   const response = await fetch(path, {
+    ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(init?.headers || {}),
+      ...requestHeaders,
     },
-    ...init,
   })
   if (!response.ok) {
     const text = await response.text()
