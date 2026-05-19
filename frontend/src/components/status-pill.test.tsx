@@ -9,13 +9,15 @@ describe("StatusPill", () => {
     const markup = renderToStaticMarkup(<StatusPill status="success" />)
 
     expect(markup).toContain("success")
-    expect(markup).toContain("bg-emerald-500/20")
+    expect(markup).toContain("bg-success/15")
+    expect(markup).toContain("text-success")
   })
 
   it("falls back to the default tone for unknown statuses", () => {
     const markup = renderToStaticMarkup(<StatusPill status="mystery" />)
 
     expect(markup).toContain("mystery")
-    expect(markup).toContain("bg-white/10")
+    expect(markup).toContain("bg-panel-strong")
+    expect(markup).toContain("text-fg")
   })
 })
