@@ -13,6 +13,7 @@ from app.db.session import SessionLocal
 from app.queue.factory import get_queue_client, get_retry_queue_client
 from app.services.scheduler_service import SchedulerService
 from app.services.worker_service import WorkerService
+from sqlalchemy import create_engine, text
 
 logger = logging.getLogger(__name__)
 
@@ -32,18 +33,28 @@ def run_scheduler() -> None:
     """
     settings = get_settings()
     configure_logging(level=settings.log_level)
-
     queue_client = get_queue_client()
+    lock_engine = create_engine(settings.database_url, pool_size=1, max_overflow=0)
+    LOCK_KEY = 114514
 
-    while True:
-        try:
-            with SessionLocal() as db:
-                service = SchedulerService(db, queue_client, settings.worker_visibility_timeout_seconds)
-                service.recover_orphans()
-                service.dispatch_due_jobs()
-        except Exception as e:
-            logger.error(f"Scheduler cycle failed: {e}")
-        finally:
+    with lock_engine.connect() as lock_conn:
+        while True:
+            is_leader = lock_conn.execute(
+                text("SELECT pg_try_advisory_lock(:key)"), {"key": LOCK_KEY}
+            ).scalar()
+            if is_leader:
+                logger.info("[LEADER] Running scheduler cycle")
+                try:
+                    with SessionLocal() as db:
+                        service = SchedulerService(
+                            db, queue_client, settings.worker_visibility_timeout_seconds
+                        )
+                        service.recover_orphans()
+                        service.dispatch_due_jobs()
+                except Exception as e:
+                    logger.error(f"[LEADER]Scheduler cycle failed: {e}")
+            else:
+                logger.debug("[STANDBY] Waiting for leader lock...")
             time.sleep(settings.scheduler_interval_seconds)
 
 
@@ -163,6 +174,7 @@ def run_worker() -> None:
             except Exception:
                 logger.exception("Worker loop error")
                 time.sleep(5)
+
 
 def main() -> None:
     """CLI 入口：根據 sys.argv[1] 分派到 scheduler 或 worker。"""

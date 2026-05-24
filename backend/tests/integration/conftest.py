@@ -22,7 +22,7 @@ def pytest_configure(config):
 def main_engine():
     url = os.environ.get(
         "DASS_DATABASE_URL",
-        "postgresql+psycopg://dass:dass@localhost:5432/dass_test",
+        "postgresql+psycopg://dass:dass@127.0.0.1:5432/dass",
     )
     engine = create_engine(url, future=True)
     Base.metadata.create_all(engine)

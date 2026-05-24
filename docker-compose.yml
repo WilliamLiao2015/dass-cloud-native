@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: dass
       POSTGRES_USER: dass
       POSTGRES_PASSWORD: dass
+    ports:
+      - "5432:5432"
     volumes:
       - dass-postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init-primary:/docker-entrypoint-initdb.d # 把腳本資料夾對應到 Docker 內部的初始化目錄
@@ -118,6 +120,28 @@ services:
     labels:
       com.dass.project: dass
       com.dass.service: scheduler
+
+  scheduler_standby:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.scheduler
+    env_file:
+      - .env
+    environment:
+      DASS_DATABASE_URL: ${DASS_DATABASE_URL:-postgresql+psycopg://dass:dass@postgres:5432/dass}
+      DASS_SQS_ENDPOINT_URL: ${DASS_SQS_ENDPOINT_URL:-http://localstack:4566}
+      DASS_WORKER_ID: ${DASS_WORKER_ID:-scheduler-standby}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dass-net
+    labels:
+      com.dass.project: dass
+      com.dass.service: scheduler-standby
 
   worker:
     build:
