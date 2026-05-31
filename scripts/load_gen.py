@@ -7,7 +7,7 @@ http://localhost:3001 (Grafana DASS · Overview).
 
 Usage:
   scripts/load_gen.py                              # 1,000 jobs, create only
-  scripts/load_gen.py --count 50000                # 5万
+  scripts/load_gen.py --count 50000                # 50k
   scripts/load_gen.py --count 50000 --trigger      # also fire each one once
   scripts/load_gen.py --count 100 --concurrency 50 # tune parallelism
 
@@ -20,11 +20,16 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from pathlib import Path
 import time
 import uuid
 from typing import Any
 
 import httpx
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CA_CERT = REPO_ROOT / "infra" / "traefik" / "pki" / "rootCA.crt"
 
 
 DEFAULT_PAYLOAD: dict[str, Any] = {
@@ -135,7 +140,9 @@ async def amain() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--count", type=int, default=1000, help="number of jobs to create (default 1000)")
     parser.add_argument("--concurrency", type=int, default=32, help="parallel HTTP requests (default 32)")
-    parser.add_argument("--api", default="http://localhost:8000", help="API base URL")
+    parser.add_argument("--api", default="https://localhost:8443", help="API base URL")
+    parser.add_argument("--ca-cert", default=str(DEFAULT_CA_CERT), help="CA certificate bundle to trust")
+    parser.add_argument("--insecure", action="store_true", help="disable TLS verification")
     parser.add_argument("--trigger", action="store_true", help="after creation, fire each job once via /trigger")
     parser.add_argument("--timeout", type=float, default=15.0, help="per-request timeout seconds")
     parser.add_argument("--prefix", default=None, help="job name prefix (default: load-<timestamp>)")
@@ -154,8 +161,9 @@ async def amain() -> int:
         max_keepalive_connections=args.concurrency,
     )
     timeout = httpx.Timeout(args.timeout, connect=5.0)
+    verify: bool | str = False if args.insecure else args.ca_cert
 
-    async with httpx.AsyncClient(limits=limits, timeout=timeout) as client:
+    async with httpx.AsyncClient(limits=limits, timeout=timeout, verify=verify) as client:
         # Quick health check
         try:
             r = await client.get(f"{args.api}/health")

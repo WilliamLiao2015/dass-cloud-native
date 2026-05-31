@@ -15,7 +15,31 @@ settings = get_settings()
 configure_logging(settings.log_level)
 
 app = FastAPI(title="dass API", version="0.1.0")
-origins = ["*"] if settings.cors_origins == "*" else [origin.strip() for origin in settings.cors_origins.split(",")]
+DEFAULT_TLS_ORIGINS = {"https://localhost:8443", "https://127.0.0.1:8443"}
+DEFAULT_HTTP_ORIGINS = {"http://localhost", "http://127.0.0.1", "http://localhost:3000", "http://127.0.0.1:3000"}
+
+
+def _normalize_cors_origins(raw: str) -> list[str]:
+    if raw == "*":
+        return ["*"]
+
+    origins: list[str] = []
+    seen: set[str] = set()
+    for origin in [origin.strip() for origin in raw.split(",")]:
+        if not origin or origin in seen:
+            continue
+        origins.append(origin)
+        seen.add(origin)
+
+    for origin in [*DEFAULT_HTTP_ORIGINS, *DEFAULT_TLS_ORIGINS]:
+        if origin not in seen:
+            origins.append(origin)
+            seen.add(origin)
+
+    return origins
+
+
+origins = _normalize_cors_origins(settings.cors_origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
