@@ -6,6 +6,7 @@
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2.x, Alembic, Pydantic, boto3, httpx, croniter
 - Frontend: Next.js, React, TypeScript, TanStack Query, Tailwind CSS
+- Proxy: Traefik
 - Database: PostgreSQL
 - Queue: AWS SQS, with LocalStack for local development
 
@@ -14,15 +15,18 @@
 ```mermaid
 flowchart LR
   Browser[Browser]
-  Frontend[Next.js Frontend\n:3000]
-  API[FastAPI API Server\n:8000]
+  Traefik[Traefik Reverse Proxy\n:80]
+  Frontend[Next.js Frontend\ninternal :3000]
+  API[FastAPI API Server\ninternal :8000]
   Scheduler[Scheduler Worker]
   Worker[Job Worker]
   DB[(PostgreSQL)]
   Queue[(AWS SQS / LocalStack)]
 
-  Browser --> Frontend
-  Frontend -->|API requests and rewrites| API
+  Browser --> Traefik
+  Traefik --> Frontend
+  Traefik -->|/api, /health, /metrics, docs| API
+  Frontend -->|server-side API rewrites| API
   API --> DB
   API --> Queue
   Scheduler --> DB
@@ -32,7 +36,7 @@ flowchart LR
   Queue --> Worker
 ```
 
-The frontend serves the UI and proxies API calls to the backend. The backend owns persistence in PostgreSQL, and scheduling/worker processes coordinate job dispatch and execution through the queue.
+Traefik is the public entrypoint. It load-balances the frontend and API containers, while the frontend still uses internal rewrites for server-side requests. The backend owns persistence in PostgreSQL, and scheduling/worker processes coordinate job dispatch and execution through the queue.
 
 ## Top-Level Structure
 
@@ -61,21 +65,23 @@ cp .env.example .env
 docker compose up --build
 
 # 3. Wait for all services to be healthy, then open:
-#    - Frontend:   http://localhost:3000
-#    - API:        http://localhost:8000
-#    - API docs:   http://localhost:8000/docs
+#    - Frontend:   https://localhost:8443
+#    - API:        https://localhost:8443/api/v1/jobs
+#    - API docs:   https://localhost:8443/docs
 #    - LocalStack: http://localhost:4566
 ```
+
+Traefik serves HTTPS on host port `8443` with a locally generated internal CA. The bootstrap step writes the root CA to `infra/traefik/pki/rootCA.crt` and the server certificate to `infra/traefik/pki/localhost.crt`. The CLI helpers trust that CA by default, but your browser may still show a warning until you import `rootCA.crt` into your OS trust store.
 
 ### Verify Services Are Running
 
 ```bash
-# Backend health check
-curl http://localhost:8000/health
+# Backend health check through Traefik
+curl --cacert infra/traefik/pki/rootCA.crt https://localhost:8443/health
 # Expected: {"status":"ok","service":"dass"}
 
 # Metrics
-curl http://localhost:8000/metrics
+curl --cacert infra/traefik/pki/rootCA.crt https://localhost:8443/metrics
 # Expected: {"jobs":0,"tasks":0}
 ```
 
@@ -99,6 +105,7 @@ docker compose up --build
 docker compose logs -f
 
 # Individual services
+docker compose logs -f traefik
 docker compose logs -f api-server
 docker compose logs -f scheduler
 docker compose logs -f worker
@@ -165,7 +172,7 @@ cd backend   # so the project .venv (with httpx) is used
 | `--count N` | number of jobs to create (default 1000) |
 | `--concurrency N` | parallel in-flight HTTP requests (default 32) |
 | `--trigger` | after creating, fire each job once via `/trigger` |
-| `--api URL` | API base URL (default `http://localhost:8000`) |
+| `--api URL` | API base URL (default `https://localhost:8443`) |
 
 Bring up the observability overlay first to watch it live at `/d/dass-overview`.
 
@@ -245,7 +252,21 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 | `GET` | `/health` | Health check |
 | `GET` | `/metrics` | Job and task counts |
 
-Interactive API documentation is available at `http://localhost:8000/docs` when the server is running.
+Interactive API documentation is available at `https://localhost:8443/docs` when the stack is running.
+
+To trust the local CA on macOS, open `infra/traefik/pki/rootCA.crt` and add it to your login keychain as a trusted root certificate.
+
+### Load Balancing the API
+
+Traefik can distribute traffic across multiple `api-server` replicas. After the stack is up, scale the API service and Traefik will spread requests across the running containers:
+
+```bash
+docker compose up -d --scale api-server=3
+```
+
+Keep the frontend at a single replica unless you also want to scale it intentionally; the public entrypoint remains `https://localhost:8443`.
+
+For a real public deployment, replace the internal CA with Traefik ACME/Let’s Encrypt and a real DNS name. The compose setup here is meant for local and lab environments where you want production-style TLS semantics without public certificate issuance.
 
 ## Development Workflow (Optional)
 
