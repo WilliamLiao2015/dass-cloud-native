@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Iterable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,20 +10,35 @@ from sqlalchemy.orm import Session
 from app.models.job import Job
 
 
+@contextmanager
+def _force_primary(db: Session) -> Iterator[None]:
+    previous = db.info.get("force_primary")
+    had_previous = "force_primary" in db.info
+    db.info["force_primary"] = True
+    try:
+        yield
+    finally:
+        if had_previous:
+            db.info["force_primary"] = previous
+        else:
+            db.info.pop("force_primary", None)
+
+
 class JobRepository:
     def __init__(self, db: Session):
         self.db = db
 
     def create(self, job: Job) -> Job:
-        # 1. 用 self.db.add() 將傳進來的 job 加入 session
-        self.db.add(job)
-        
-        # 2. 執行 commit 提交變更到資料庫
-        self.db.commit()
-        
-        # 3. 執行 refresh 取得資料庫生成的欄位（例如 id）
-        self.db.refresh(job)
-        
+        with _force_primary(self.db):
+            # 1. 用 self.db.add() 將傳進來的 job 加入 session
+            self.db.add(job)
+
+            # 2. 執行 commit 提交變更到資料庫
+            self.db.commit()
+
+            # 3. 執行 refresh 取得資料庫生成的欄位（例如 id）
+            self.db.refresh(job)
+
         # 4. 回傳處理完的 job 物件
         return job
 
@@ -51,9 +67,10 @@ class JobRepository:
     def update(self, job: Job) -> Job:
         # SQLAlchemy 會檢查傳進來的這個 job 物件，如果這個 job 沒有 ID，執行 INSERT，
         # 反之會自動對比哪裡被改過，然後發送 UPDATE 指令只修改那些欄位。
-        self.db.add(job)
-        self.db.commit()
-        self.db.refresh(job)
+        with _force_primary(self.db):
+            self.db.add(job)
+            self.db.commit()
+            self.db.refresh(job)
         return job
 
     def due_jobs(self, now: datetime) -> list[Job]:
