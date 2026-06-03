@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import ssl
 import subprocess
 import sys
 import time
@@ -21,6 +22,12 @@ import urllib.error
 import urllib.request
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_API_BASE = "https://localhost:8443"
+DEFAULT_CA_CERT = REPO_ROOT / "infra" / "traefik" / "pki" / "rootCA.crt"
 
 
 # ── ANSI helpers ────────────────────────────────────────────────────────────
@@ -100,13 +107,27 @@ class Report:
         print(r.render())
 
 
-def http_get(url: str, timeout: float = 3.0) -> tuple[int, str]:
+def build_ssl_context(ca_cert: Path | None, insecure: bool) -> ssl.SSLContext | None:
+    if insecure:
+        return ssl._create_unverified_context()
+    if ca_cert and ca_cert.exists():
+        return ssl.create_default_context(cafile=str(ca_cert))
+    return None
+
+
+def http_get(url: str, timeout: float = 3.0, ssl_context: ssl.SSLContext | None = None) -> tuple[int, str]:
     req = urllib.request.Request(url, method="GET")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with urllib.request.urlopen(req, timeout=timeout, context=ssl_context) as resp:
         return resp.status, resp.read().decode("utf-8", errors="replace")
 
 
-def http_json(method: str, url: str, payload: dict | None = None, timeout: float = 5.0) -> tuple[int, dict]:
+def http_json(
+    method: str,
+    url: str,
+    payload: dict | None = None,
+    timeout: float = 5.0,
+    ssl_context: ssl.SSLContext | None = None,
+) -> tuple[int, dict]:
     body = json.dumps(payload).encode("utf-8") if payload is not None else None
     req = urllib.request.Request(
         url,
@@ -115,7 +136,7 @@ def http_json(method: str, url: str, payload: dict | None = None, timeout: float
         headers={"Content-Type": "application/json"} if body else {},
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=ssl_context) as resp:
             data = resp.read().decode("utf-8")
             return resp.status, json.loads(data) if data else {}
     except urllib.error.HTTPError as e:
@@ -157,11 +178,11 @@ def docker_compose_ps() -> dict[str, str]:
 # ── Phase 1: component health ───────────────────────────────────────────────
 
 
-def check_components(api_base: str, report: Report) -> dict[str, str]:
+def check_components(api_base: str, report: Report, ssl_context: ssl.SSLContext | None) -> dict[str, str]:
     header("Phase 1 ── Component Health")
 
     services = docker_compose_ps()
-    expected = ["postgres", "postgres-replica", "localstack", "api-server", "scheduler", "worker", "frontend"]
+    expected = ["traefik", "postgres", "postgres-replica", "localstack", "api-server", "scheduler", "worker", "frontend"]
     if not services:
         report.add_component(CheckResult("docker compose ps", "warn", "no compose project detected in CWD"))
     else:
@@ -176,7 +197,7 @@ def check_components(api_base: str, report: Report) -> dict[str, str]:
 
     # API /health (also exercises DB connection)
     try:
-        status, body = http_get(f"{api_base}/health")
+        status, body = http_get(f"{api_base}/health", ssl_context=ssl_context)
         if status == 200:
             report.add_component(CheckResult("API /health (also pings DB)", "ok", body.strip()))
         else:
@@ -186,7 +207,7 @@ def check_components(api_base: str, report: Report) -> dict[str, str]:
 
     # API /metrics
     try:
-        status, body = http_get(f"{api_base}/metrics")
+        status, body = http_get(f"{api_base}/metrics", ssl_context=ssl_context)
         if status == 200:
             report.add_component(CheckResult("API /metrics", "ok", body.strip()))
         else:
@@ -219,13 +240,13 @@ def check_components(api_base: str, report: Report) -> dict[str, str]:
 
     # Frontend
     try:
-        status, _ = http_get("http://localhost:3000/")
+        status, _ = http_get(DEFAULT_API_BASE + "/", ssl_context=ssl_context)
         if status < 500:
-            report.add_component(CheckResult("Frontend :3000", "ok", f"HTTP {status}"))
+            report.add_component(CheckResult("Frontend via Traefik", "ok", f"HTTP {status}"))
         else:
-            report.add_component(CheckResult("Frontend :3000", "fail", f"HTTP {status}"))
+            report.add_component(CheckResult("Frontend via Traefik", "fail", f"HTTP {status}"))
     except Exception as e:
-        report.add_component(CheckResult("Frontend :3000", "warn", str(e)))
+        report.add_component(CheckResult("Frontend via Traefik", "warn", str(e)))
 
     return services
 
@@ -233,7 +254,7 @@ def check_components(api_base: str, report: Report) -> dict[str, str]:
 # ── Phase 2: end-to-end user request flow ───────────────────────────────────
 
 
-def run_pipeline(api_base: str, report: Report) -> None:
+def run_pipeline(api_base: str, report: Report, ssl_context: ssl.SSLContext | None) -> None:
     header("Phase 2 ── End-to-End: create job → trigger → watch task")
 
     job_name = f"e2e-smoke-{uuid.uuid4().hex[:8]}"
@@ -248,7 +269,7 @@ def run_pipeline(api_base: str, report: Report) -> None:
     }
 
     # Step 1: create job
-    status, resp = http_json("POST", f"{api_base}/api/v1/jobs", payload)
+    status, resp = http_json("POST", f"{api_base}/api/v1/jobs", payload, ssl_context=ssl_context)
     if status != 200:
         report.add_step(CheckResult("POST /api/v1/jobs", "fail", f"HTTP {status}: {resp}"))
         return
@@ -256,7 +277,7 @@ def run_pipeline(api_base: str, report: Report) -> None:
     report.add_step(CheckResult("POST /api/v1/jobs", "ok", f"job_id={job_id}"))
 
     # Step 2: trigger manually
-    status, resp = http_json("POST", f"{api_base}/api/v1/jobs/{job_id}/trigger")
+    status, resp = http_json("POST", f"{api_base}/api/v1/jobs/{job_id}/trigger", ssl_context=ssl_context)
     if status != 200:
         report.add_step(CheckResult("POST /jobs/{id}/trigger", "fail", f"HTTP {status}: {resp}"))
         return
@@ -272,7 +293,7 @@ def run_pipeline(api_base: str, report: Report) -> None:
     start = time.time()
     final_task: dict | None = None
     while time.time() < deadline:
-        status, tasks = http_json("GET", f"{api_base}/api/v1/jobs/{job_id}/tasks")
+        status, tasks = http_json("GET", f"{api_base}/api/v1/jobs/{job_id}/tasks", ssl_context=ssl_context)
         if status != 200 or not isinstance(tasks, list):
             report.add_step(CheckResult("GET /jobs/{id}/tasks", "fail", f"HTTP {status}: {tasks}"))
             return
@@ -362,15 +383,19 @@ def print_verdict(report: Report) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api", default="http://localhost:8000", help="API base URL")
+    parser.add_argument("--api", default=DEFAULT_API_BASE, help="API base URL")
+    parser.add_argument("--ca-cert", default=str(DEFAULT_CA_CERT), help="CA certificate bundle to trust")
+    parser.add_argument("--insecure", action="store_true", help="disable TLS verification")
     args = parser.parse_args()
 
     print(c("DASS end-to-end smoke test", BOLD))
     print(c(f"API base: {args.api}", DIM))
 
     report = Report()
-    check_components(args.api, report)
-    run_pipeline(args.api, report)
+    ca_cert = Path(args.ca_cert) if args.ca_cert else None
+    ssl_context = build_ssl_context(ca_cert, args.insecure)
+    check_components(args.api, report, ssl_context)
+    run_pipeline(args.api, report, ssl_context)
     return print_verdict(report)
 
 

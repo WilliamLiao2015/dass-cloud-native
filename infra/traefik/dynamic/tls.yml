@@ -1,0 +1,7 @@
+tls:
+  certificates:
+    - certFile: /etc/traefik/pki/localhost.crt
+      keyFile: /etc/traefik/pki/localhost.key
+  options:
+    default:
+      minVersion: VersionTLS12

@@ -6,6 +6,7 @@
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2.x, Alembic, Pydantic, boto3, httpx, croniter
 - Frontend: Next.js, React, TypeScript, TanStack Query, Tailwind CSS
+- Proxy: Traefik
 - Database: PostgreSQL
 - Queue: AWS SQS, with LocalStack for local development
 
@@ -38,14 +39,17 @@
 ```mermaid
 flowchart LR
   Browser[Browser]
-  Frontend[Next.js Frontend\n:3000]
-  API[FastAPI API Server\n:8000]
+  Traefik[Traefik Reverse Proxy\n:80]
+  Frontend[Next.js Frontend\ninternal :3000]
+  API[FastAPI API Server\ninternal :8000]
   Scheduler[Scheduler Worker]
   Worker[Job Worker]
   DB[(PostgreSQL)]
   Queue[(AWS SQS / LocalStack)]
-  Browser --> Frontend
-  Frontend -->|API requests and rewrites| API
+  Browser --> Traefik
+  Traefik --> Frontend
+  Traefik -->|/api, /health, /metrics, docs| API
+  Frontend -->|server-side API rewrites| API
   API --> DB
   API --> Queue
   Scheduler --> DB
@@ -55,7 +59,7 @@ flowchart LR
   Queue --> Worker
 ```
 
-The frontend serves the UI and proxies API calls to the backend. The backend owns persistence in PostgreSQL, and scheduling/worker processes coordinate job dispatch and execution through the queue.
+Traefik is the public entrypoint. It load-balances the frontend and API containers, while the frontend still uses internal rewrites for server-side requests. The backend owns persistence in PostgreSQL, and scheduling/worker processes coordinate job dispatch and execution through the queue.
 
 ## Top-Level Structure
 
@@ -121,7 +125,6 @@ docker compose up --scale worker=3
 
 ```bash
 cp .env.example .env
-
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d \
   postgres postgres-replica localstack api-server scheduler frontend
 ```
@@ -132,6 +135,8 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d \
 curl http://localhost:8000/health
 # 預期：{"status":"ok","service":"dass"}
 ```
+
+如果你也有啟動 Traefik，則可以改用公開入口 `https://localhost:8443`；本機憑證鏈會放在 `infra/traefik/pki/rootCA.crt`。
 
 ---
 
@@ -356,6 +361,7 @@ docker compose up --build
 docker compose logs -f
 
 # Individual services
+docker compose logs -f traefik
 docker compose logs -f api-server
 docker compose logs -f scheduler
 docker compose logs -f worker
@@ -480,12 +486,14 @@ cd backend
 .venv/bin/python ../scripts/load_gen.py --count 1000 --concurrency 32 --trigger
 ```
 
-| Flag | 說明 |
-|------|------|
-| `--count N` | 建立幾個 job（預設 1000） |
-| `--concurrency N` | 並行 HTTP 請求數（預設 32） |
-| `--trigger` | 建完後立即 trigger 每個 job |
-| `--api URL` | API base URL（預設 `http://localhost:8000`） |
+| Flag | Meaning |
+|------|---------|
+| `--count N` | number of jobs to create (default 1000) |
+| `--concurrency N` | parallel in-flight HTTP requests (default 32) |
+| `--trigger` | after creating, fire each job once via `/trigger` |
+| `--api URL` | API base URL (default `https://localhost:8443`) |
+
+`load_test.sh` 會沿用這個預設值；如果你只啟動了純 Docker Compose 的 API，而沒有 Traefik，請加上 `--api http://localhost:8000` 自行覆蓋。
 
 **Kubernetes 模式下觀察 KEDA 擴縮：**
 
@@ -573,7 +581,21 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 | `GET` | `/health` | Health check |
 | `GET` | `/metrics` | Job and task counts |
 
-Interactive API documentation is available at `http://localhost:8000/docs` when the server is running.
+Interactive API documentation is available at `https://localhost:8443/docs` when the stack is running.
+
+To trust the local CA on macOS, open `infra/traefik/pki/rootCA.crt` and add it to your login keychain as a trusted root certificate.
+
+### Load Balancing the API
+
+Traefik can distribute traffic across multiple `api-server` replicas. After the stack is up, scale the API service and Traefik will spread requests across the running containers:
+
+```bash
+docker compose up -d --scale api-server=3
+```
+
+Keep the frontend at a single replica unless you also want to scale it intentionally; the public entrypoint remains `https://localhost:8443`.
+
+For a real public deployment, replace the internal CA with Traefik ACME/Let’s Encrypt and a real DNS name. The compose setup here is meant for local and lab environments where you want production-style TLS semantics without public certificate issuance.
 
 ## Development Workflow (Optional)
 

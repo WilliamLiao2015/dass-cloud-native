@@ -62,6 +62,21 @@ class TestJobRepository:
         assert created.name == "test-job"
         assert db_session.query(Job).filter(Job.id == created.id).first() is not None
 
+    def test_create_job_refresh_uses_primary(self, job_repo, db_session, monkeypatch):
+        seen_force_primary = False
+        real_refresh = db_session.refresh
+
+        def refresh_with_probe(*args, **kwargs):
+            nonlocal seen_force_primary
+            seen_force_primary = db_session.info.get("force_primary") is True
+            return real_refresh(*args, **kwargs)
+
+        monkeypatch.setattr(db_session, "refresh", refresh_with_probe)
+
+        job_repo.create(_make_job(name="test-job-primary-refresh"))
+
+        assert seen_force_primary is True
+
     def test_get_job(self, job_repo):
         job = _make_job(
             name="get-test",

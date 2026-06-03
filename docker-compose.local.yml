@@ -5,6 +5,8 @@ services:
       - ./backend:/app
     environment:
       DASS_LOG_LEVEL: DEBUG
+    ports:
+      - "8000:8000"
 
   scheduler:
     command: python -m app.cli scheduler
