@@ -53,7 +53,7 @@ services:
     volumes:
       - dass-postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init-primary:/docker-entrypoint-initdb.d # 把腳本資料夾對應到 Docker 內部的初始化目錄
-    command: postgres -c max_connections=200 -c shared_buffers=256MB # 加上這一行，把主庫實體椅子開到 200 張！
+    command: postgres -c max_connections=100 -c shared_buffers=256MB # 加上這一行，把主庫實體椅子開到 200 張！
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dass -d dass"]
       interval: 5s
