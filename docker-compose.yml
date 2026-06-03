@@ -70,6 +70,7 @@ services:
     image: postgres:16-alpine
     # 關鍵：不用官方的開機流程，改用我們寫的影子腳本開機
     entrypoint: ["/init-script/entrypoint-replica.sh"]
+    command: postgres -c max_connections=200 -c shared_buffers=256MB # 命令副庫啟動時，物理帶入 200 的硬核參數
     environment:
       POSTGRES_DB: dass
       POSTGRES_USER: dass

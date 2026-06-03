@@ -31,4 +31,4 @@ fi
 
 # 5. 把控制權交還給 Docker 官方的啟動程式
 echo ">>> 啟動 PostgreSQL 伺服器..."
-exec docker-entrypoint.sh postgres
+exec docker-entrypoint.sh "$@"    # postgres
