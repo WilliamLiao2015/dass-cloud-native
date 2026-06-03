@@ -22,10 +22,6 @@ from sqlalchemy import create_engine, text
 logger = logging.getLogger(__name__)
 
 
-# Per spec：一個 worker VM 每條 queue 最多跑幾個 job container
-CONTAINERS_PER_VM = 10
-
-
 def run_scheduler() -> None:
     """啟動 Scheduler 主迴圈：dispatch due jobs + recover orphans。"""
     settings = get_settings()
@@ -123,49 +119,42 @@ async def _run_dedicated_pool_async(queue, queue_name: str, max_concurrent: int,
     containers running at once — none of them block each other while waiting for
     network responses. Previously, each in-flight job blocked one OS thread.
     """
-    semaphore = asyncio.Semaphore(max_concurrent)
-    active_count = 0
+    active_tasks: set[asyncio.Task[bool]] = set()
 
     async def _execute_task_async(task_msg) -> bool:
-        nonlocal active_count
-        async with semaphore:
-            active_count += 1
-            task_id = _extract_task_id(task_msg.body)
-            if not task_id:
-                logger.warning("[%s] Message payload missing task_id", queue_name)
+        task_id = _extract_task_id(task_msg.body)
+        if not task_id:
+            logger.warning("[%s] Message payload missing task_id", queue_name)
+            await asyncio.to_thread(queue.delete_message, task_msg.receipt_handle)
+            return False
+
+        def extend_visibility(seconds: int) -> None:
+            queue.change_message_visibility(task_msg.receipt_handle, seconds)
+
+        try:
+            logger.info("[%s] Processing task_id=%s", queue_name, task_id)
+            with SessionLocal() as db:
+                service = WorkerService(
+                    db=db,
+                    queue_client=queue,
+                    worker_id=settings.worker_id,
+                    claim_seconds=settings.worker_visibility_timeout_seconds,
+                    retry_queue=retry_queue,
+                )
+                success = await service.process_task_id_async(str(task_id), extend_visibility)
+            if success:
                 await asyncio.to_thread(queue.delete_message, task_msg.receipt_handle)
-                active_count -= 1
-                return False
-
-            def extend_visibility(seconds: int) -> None:
-                queue.change_message_visibility(task_msg.receipt_handle, seconds)
-
-            try:
-                logger.info("[%s] Processing task_id=%s", queue_name, task_id)
-                with SessionLocal() as db:
-                    service = WorkerService(
-                        db=db,
-                        queue_client=queue,
-                        worker_id=settings.worker_id,
-                        claim_seconds=settings.worker_visibility_timeout_seconds,
-                        retry_queue=retry_queue,
-                    )
-                    success = await service.process_task_id_async(str(task_id), extend_visibility)
-                if success:
-                    await asyncio.to_thread(queue.delete_message, task_msg.receipt_handle)
-                    logger.info("[%s] Finished task_id=%s", queue_name, task_id)
-                else:
-                    logger.warning("[%s] Task not claimed, message kept. task_id=%s", queue_name, task_id)
-                return success
-            except Exception:
-                logger.exception("[%s] Error processing task_id=%s", queue_name, task_id)
-                return False
-            finally:
-                active_count -= 1
+                logger.info("[%s] Finished task_id=%s", queue_name, task_id)
+            else:
+                logger.warning("[%s] Task not claimed, message kept. task_id=%s", queue_name, task_id)
+            return success
+        except Exception:
+            logger.exception("[%s] Error processing task_id=%s", queue_name, task_id)
+            return False
 
     while True:
         try:
-            available = max_concurrent - active_count
+            available = max_concurrent - len(active_tasks)
             if available <= 0:
                 await asyncio.sleep(0.05)
                 continue
@@ -173,9 +162,15 @@ async def _run_dedicated_pool_async(queue, queue_name: str, max_concurrent: int,
                 queue.receive_tasks, max_messages=available, wait_time_seconds=2
             )
             for msg in msgs:
-                asyncio.create_task(_execute_task_async(msg))
+                task = asyncio.create_task(_execute_task_async(msg))
+                active_tasks.add(task)
+                task.add_done_callback(active_tasks.discard)
         except asyncio.CancelledError:
             logger.info("[%s] Pool cancelled.", queue_name)
+            for task in active_tasks:
+                task.cancel()
+            if active_tasks:
+                await asyncio.gather(*active_tasks, return_exceptions=True)
             break
         except Exception:
             logger.exception("[%s] Pool loop error", queue_name)
@@ -200,6 +195,7 @@ def run_worker(queue: str | None = None) -> None:
 
     settings = get_settings()
     configure_logging(settings.log_level)
+    max_concurrent_per_queue = max(1, settings.worker_concurrency_per_queue)
 
     retry_queue = get_retry_queue_client()
 
@@ -213,13 +209,13 @@ def run_worker(queue: str | None = None) -> None:
         "Worker '%s' started. pools=%d, max_concurrent_per_pool=%d, queues=%s",
         settings.worker_id,
         len(queues_to_run),
-        CONTAINERS_PER_VM,
+        max_concurrent_per_queue,
         [name for name, _ in queues_to_run],
     )
 
     async def _run_all_pools() -> None:
         await asyncio.gather(*[
-            _run_dedicated_pool_async(q, name, CONTAINERS_PER_VM, settings, retry_queue)
+            _run_dedicated_pool_async(q, name, max_concurrent_per_queue, settings, retry_queue)
             for name, q in queues_to_run
         ])
 

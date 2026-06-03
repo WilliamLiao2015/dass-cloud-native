@@ -14,8 +14,7 @@ from app.db.session import SessionLocal
 from app.models.task import Task
 from app.repositories.job_repository import JobRepository
 from app.repositories.task_repository import TaskRepository
-# from app.services.execution_factory import get_execution_service
-from app.services.execution_service import ExecutionService
+from app.services.execution_factory import get_execution_service
 from app.services.execution_service import ContainerSpec, ExecutionResult
 from app.utils.time import utcnow
 
@@ -34,7 +33,7 @@ class WorkerService:
         self.claim_seconds = claim_seconds
         self.tasks = TaskRepository(db)
         self.jobs = JobRepository(db)
-        self.executor = ExecutionService()
+        self.executor = get_execution_service()
 
     def claim_task(self, task_id: str) -> Task | None:
         locked_until = utcnow() + timedelta(seconds=self.claim_seconds)
@@ -88,6 +87,7 @@ class WorkerService:
             self.tasks.mark_failed(task, stdout="", stderr="Job not found", final=True)
             return True
 
+        self._release_db_connection_before_execution()
         result = self._execute_job(task, job, extend_visibility)
 
         if result.success:
@@ -112,6 +112,15 @@ class WorkerService:
                 return job
             time.sleep(0.5)
         return None
+
+    def _release_db_connection_before_execution(self) -> None:
+        """Return the read transaction's connection before long-running work.
+
+        The worker keeps the Session object so later status updates can reuse it,
+        but no DB connection should sit checked out while the executor is running.
+        """
+        if self.db.in_transaction():
+            self.db.commit()
 
     def _execute_job(
         self,
@@ -209,6 +218,7 @@ class WorkerService:
             self.tasks.mark_failed(task, stdout="", stderr="Job not found", final=True)
             return True
 
+        self._release_db_connection_before_execution()
         result = await self._execute_job_async(task, job, extend_visibility)
 
         if result.success:

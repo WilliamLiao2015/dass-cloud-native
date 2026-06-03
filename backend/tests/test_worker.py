@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -69,6 +71,47 @@ class TestWorkerService:
         assert service.process_task_id(str(task.id))
         updated = db_session.get(Task, task.id)
         assert updated.status == "success"
+
+    def test_worker_releases_db_connection_during_execution(self, db_session, monkeypatch):
+        """Long-running execution must not hold an idle DB transaction open."""
+        queue = MemoryQueueClient()
+        job = _job(db_session)
+        task = Task(job_id=job.id, status="pending", trigger_type="manual", retry_count=0)
+        db_session.add(task)
+        db_session.commit()
+
+        service = WorkerService(db_session, queue, "worker-1")
+
+        def fake_execute(task_arg, job_arg, extend_visibility=None):
+            from app.services.execution_service import ExecutionResult
+
+            assert not db_session.in_transaction()
+            return ExecutionResult(success=True, stdout="ok", stderr="")
+
+        monkeypatch.setattr(service, "_execute_job", fake_execute)
+
+        assert service.process_task_id(str(task.id))
+
+    @pytest.mark.asyncio
+    async def test_async_worker_releases_db_connection_during_execution(self, db_session, monkeypatch):
+        """Async workers multiplex jobs, so idle checked-out DB connections are especially costly."""
+        queue = MemoryQueueClient()
+        job = _job(db_session)
+        task = Task(job_id=job.id, status="pending", trigger_type="manual", retry_count=0)
+        db_session.add(task)
+        db_session.commit()
+
+        service = WorkerService(db_session, queue, "worker-1")
+
+        async def fake_execute(task_arg, job_arg, extend_visibility=None):
+            from app.services.execution_service import ExecutionResult
+
+            assert not db_session.in_transaction()
+            return ExecutionResult(success=True, stdout="ok", stderr="")
+
+        monkeypatch.setattr(service, "_execute_job_async", fake_execute)
+
+        assert await service.process_task_id_async(str(task.id))
 
     def test_retry_flow(self, db_session):
         """Worker should create retry task when execution fails."""

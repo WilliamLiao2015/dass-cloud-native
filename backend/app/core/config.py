@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     worker_visibility_timeout_seconds: int = 30
     autoscaler_interval_seconds: int = 30
     worker_id: str = "worker"
+    worker_concurrency_per_queue: int = 2
     task_timeout_seconds: int = 300
     shell_execution_enabled: bool = True
     http_request_timeout_seconds: int = 30
