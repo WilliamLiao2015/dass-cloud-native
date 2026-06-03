@@ -40,17 +40,28 @@ class SchedulerService:
             if job.enabled:
                 if job.next_fire_at.tzinfo is None:
                     job.next_fire_at = job.next_fire_at.replace(tzinfo=UTC)
+
+                cached_job = self._job_cache.get(str(job.id))
+                # 若 cache 中沒有這個 job，或新的下次執行時間跟 cache 裡的不同，才 push 進 Heap
+                if (
+                    not cached_job
+                    or abs(
+                        cached_job.next_fire_at.timestamp()
+                        - job.next_fire_at.timestamp()
+                    )
+                    > 0.001
+                ):
+                    heapq.heappush(
+                        self._heap, (job.next_fire_at.timestamp(), str(job.id))
+                    )
+
                 self._job_cache[str(job.id)] = job
-                # 直接把新的時間 Push 進原本的 Heap 裡 (O(log N))
-                # 備註：Heap 裡面可能還殘留著這個 job 的舊時間，不用理它！
-                heapq.heappush(self._heap, (job.next_fire_at.timestamp(), str(job.id)))
             else:
                 self._job_cache.pop(str(job.id), None)
 
         self.last_sync_at = utcnow()
 
     def recover_orphans(self) -> int:
-        """回收所有 locked_until 過期的 running Task：重設為 pending 並重送 Queue。"""
         """回收所有 locked_until 過期的 running Task：把 status 改回 pending。
 
         不需要重送 message：worker 端 heartbeat 同步延長 SQS visibility 與 DB locked_until，
