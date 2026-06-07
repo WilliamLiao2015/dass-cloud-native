@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { formatDateTime } from "../_lib/jobs-list.utils"
 
 function TaskBadge({
@@ -109,9 +111,12 @@ export function JobTaskList({
                   >
                     <td className="px-4 py-4">
                       <div className="space-y-2">
-                        <div className="font-mono text-sm text-fg">
+                        <Link
+                          className="font-mono text-sm text-fg transition hover:text-accent"
+                          href={`/tasks/${task.id}`}
+                        >
                           {task.id}
-                        </div>
+                        </Link>
                         <div className="text-xs text-muted">{task.job_id}</div>
                       </div>
                     </td>

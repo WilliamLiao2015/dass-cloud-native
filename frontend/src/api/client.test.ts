@@ -130,4 +130,30 @@ describe("api", () => {
       expect.any(Object)
     )
   })
+
+  it("fetches a single task by id", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: "task-1",
+        job_id: "job-1",
+        status: "success",
+        trigger_type: "manual",
+        retry_count: 0,
+        locked_by: null,
+        locked_until: null,
+        started_at: null,
+        finished_at: null,
+        stdout: "hello",
+        stderr: "",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+    }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await api.getTask("task-1")
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/tasks/task-1", expect.any(Object))
+  })
 })

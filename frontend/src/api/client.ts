@@ -73,6 +73,7 @@ export const api = {
       method: "POST",
     }),
   listJobTasks: (id: string) => request<Task[]>(`/api/v1/jobs/${id}/tasks`),
+  getTask: (id: string) => request<Task>(`/api/v1/tasks/${id}`),
   retryTask: (id: string) =>
     request<{ task_id: string; retry_task_id: string; status: string }>(
       `/api/v1/tasks/${id}/retry`,
