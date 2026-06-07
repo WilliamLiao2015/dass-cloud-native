@@ -7,10 +7,23 @@ from app.api.deps import get_db
 from app.models.task import Task
 from app.queue.factory import get_retry_queue_client
 from app.repositories.task_repository import TaskRepository
-from app.schemas.task import RetryResponse
+from app.schemas.task import RetryResponse, TaskRead
 
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
+
+
+@router.get("/{task_id}", response_model=TaskRead)
+def get_task(task_id: str, db: Session = Depends(get_db)):
+    """取得單一 Task 的執行細節。"""
+
+    repo = TaskRepository(db)
+    task = repo.get(task_id)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return TaskRead.model_validate(task, from_attributes=True)
 
 
 @router.post("/{task_id}/retry", response_model=RetryResponse)

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.models.job import Job
+from app.models.task import Task
+
 
 def test_create_job(client):
     response = client.post(
@@ -112,3 +115,41 @@ def test_list_jobs_supports_filters_and_pagination(client):
     assert body["total_pages"] == 2
     assert len(body["items"]) == 2
 
+
+def test_get_task_details(client, db_session):
+    job = Job(
+        name="task-detail-job",
+        job_type="scheduled",
+        cron_expression="*/5 * * * *",
+        action_type="shell",
+        action_config={"command": "echo hi", "timeout_seconds": 5},
+        runtime_spec={"image": "alpine:3", "command": ["sh", "-c", "echo hi"], "env": {}, "timeout_seconds": 5},
+        enabled=True,
+        concurrency_policy="allow",
+        max_retries=1,
+        next_fire_at=None,
+    )
+    db_session.add(job)
+    db_session.commit()
+    db_session.refresh(job)
+
+    task = Task(
+        job_id=job.id,
+        status="success",
+        trigger_type="manual",
+        retry_count=2,
+        stdout="job output",
+        stderr="",
+    )
+    db_session.add(task)
+    db_session.commit()
+    db_session.refresh(task)
+
+    response = client.get(f"/api/v1/tasks/{task.id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == str(task.id)
+    assert body["job_id"] == str(job.id)
+    assert body["status"] == "success"
+    assert body["stdout"] == "job output"
+    assert body["stderr"] == ""
