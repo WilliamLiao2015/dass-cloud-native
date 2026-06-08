@@ -52,6 +52,7 @@ def run_scheduler() -> None:
                     service.sync_jobs()
                     service.recover_orphans()
                     service.dispatch_due_jobs()
+                    service.trigger_dependent_jobs()
                 except Exception as e:
                     logger.error(f"[LEADER]Scheduler cycle failed: {e}")
             else:
@@ -101,7 +102,9 @@ def _extract_task_id(body: str) -> str | None:
     return None
 
 
-async def _run_dedicated_pool_async(queue, queue_name: str, max_concurrent: int, settings, retry_queue) -> None:
+async def _run_dedicated_pool_async(
+    queue, queue_name: str, max_concurrent: int, settings, retry_queue
+) -> None:
     """Async worker loop: one event loop handles max_concurrent jobs for this queue.
 
     Each queue (normal / scheduled / retry) gets its own dedicated pool with an
@@ -136,15 +139,25 @@ async def _run_dedicated_pool_async(queue, queue_name: str, max_concurrent: int,
                         claim_seconds=settings.worker_visibility_timeout_seconds,
                         retry_queue=retry_queue,
                     )
-                    success = await service.process_task_id_async(str(task_id), extend_visibility)
+                    success = await service.process_task_id_async(
+                        str(task_id), extend_visibility
+                    )
                 if success:
-                    await asyncio.to_thread(queue.delete_message, task_msg.receipt_handle)
+                    await asyncio.to_thread(
+                        queue.delete_message, task_msg.receipt_handle
+                    )
                     logger.info("[%s] Finished task_id=%s", queue_name, task_id)
                 else:
-                    logger.warning("[%s] Task not claimed, message kept. task_id=%s", queue_name, task_id)
+                    logger.warning(
+                        "[%s] Task not claimed, message kept. task_id=%s",
+                        queue_name,
+                        task_id,
+                    )
                 return success
             except Exception:
-                logger.exception("[%s] Error processing task_id=%s", queue_name, task_id)
+                logger.exception(
+                    "[%s] Error processing task_id=%s", queue_name, task_id
+                )
                 return False
             finally:
                 active_count -= 1
@@ -182,7 +195,9 @@ def run_worker(queue: str | None = None) -> None:
     queue=<name> → 只啟動指定 queue 的 pool（K8s 每 pool 一個 Deployment 模式）
     """
     if queue is not None and queue not in _QUEUE_FACTORIES:
-        raise SystemExit(f"Unknown queue: {queue!r}. Valid values: {list(_QUEUE_FACTORIES)}")
+        raise SystemExit(
+            f"Unknown queue: {queue!r}. Valid values: {list(_QUEUE_FACTORIES)}"
+        )
 
     settings = get_settings()
     configure_logging(settings.log_level)
@@ -207,10 +222,14 @@ def run_worker(queue: str | None = None) -> None:
     async def _run_all_pools() -> None:
         # 每條 queue 各自一個 pool、各自一份並發額度 (MAX_CONCURRENT_PER_QUEUE)，
         # 互不搶佔；單 worker 總並發 = pool 數 × MAX_CONCURRENT_PER_QUEUE。
-        await asyncio.gather(*[
-            _run_dedicated_pool_async(q, name, MAX_CONCURRENT_PER_QUEUE, settings, retry_queue)
-            for name, q in queues_to_run
-        ])
+        await asyncio.gather(
+            *[
+                _run_dedicated_pool_async(
+                    q, name, MAX_CONCURRENT_PER_QUEUE, settings, retry_queue
+                )
+                for name, q in queues_to_run
+            ]
+        )
 
     try:
         asyncio.run(_run_all_pools())

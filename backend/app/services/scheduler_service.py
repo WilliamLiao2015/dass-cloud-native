@@ -38,22 +38,24 @@ class SchedulerService:
             db.expunge_all()
         for job in jobs:
             if job.enabled:
-                if job.next_fire_at.tzinfo is None:
+                if job.next_fire_at and job.next_fire_at.tzinfo is None:
                     job.next_fire_at = job.next_fire_at.replace(tzinfo=UTC)
 
                 cached_job = self._job_cache.get(str(job.id))
                 # 若 cache 中沒有這個 job，或新的下次執行時間跟 cache 裡的不同，才 push 進 Heap
-                if (
-                    not cached_job
-                    or abs(
-                        cached_job.next_fire_at.timestamp()
-                        - job.next_fire_at.timestamp()
-                    )
-                    > 0.001
-                ):
-                    heapq.heappush(
-                        self._heap, (job.next_fire_at.timestamp(), str(job.id))
-                    )
+                if job.next_fire_at is not None:
+                    if (
+                        not cached_job
+                        or cached_job.next_fire_at is None
+                        or abs(
+                            cached_job.next_fire_at.timestamp()
+                            - job.next_fire_at.timestamp()
+                        )
+                        > 0.001
+                    ):
+                        heapq.heappush(
+                            self._heap, (job.next_fire_at.timestamp(), str(job.id))
+                        )
 
                 self._job_cache[str(job.id)] = job
             else:
@@ -121,12 +123,13 @@ class SchedulerService:
                 # 執行發射
                 success = self._dispatch_job(job, now)
 
-                if job.next_fire_at.tzinfo is None:
+                if job.next_fire_at and job.next_fire_at.tzinfo is None:
                     job.next_fire_at = job.next_fire_at.replace(tzinfo=UTC)
 
                 # 【不管成功或失敗】，它的 next_fire_at 都已經算好了，必須存回快取並 Push 回 Heap 排隊
                 self._job_cache[str(job_id)] = job
-                heapq.heappush(self._heap, (job.next_fire_at.timestamp(), str(job_id)))
+                if job.next_fire_at is not None:
+                    heapq.heappush(self._heap, (job.next_fire_at.timestamp(), str(job_id)))
 
                 # 只有真正發射成功才算 counter
                 if success:
@@ -168,3 +171,46 @@ class SchedulerService:
         self.task.create(task)
         self.queue.send_task(str(task.id))
         return True
+
+    def trigger_dependent_jobs(self) -> int:
+        """輪詢找出剛成功的任務，並觸發它們的下游"""
+        counter = 0
+        with self.session_maker() as db:
+            task_repo = TaskRepository(db)
+            job_repo = JobRepository(db)
+
+            # 1. 撈出剛成功但還沒處理相依性的 Tasks
+            tasks = task_repo.get_unprocessed_successful_tasks()
+
+            for task in tasks:
+                # 2. 標記為已處理，避免下次輪詢重複撈到
+                task_repo.mark_processed_for_chaining(task)
+
+                # 3. 檢查母 Job 有沒有設定 next_job_id
+                job = job_repo.get(task.job_id)
+                if not job or not job.next_job_id:
+                    continue
+
+                # 4. 檢查下游 Job 是否存在且啟用
+                next_job = job_repo.get(job.next_job_id)
+                if not next_job or not next_job.enabled:
+                    continue
+
+                # 5. 建立新的 Task 並推入 Queue
+                new_task = Task(
+                    job_id=str(next_job.id),
+                    status="pending",
+                    trigger_type="dependency",
+                    retry_count=0,
+                )
+                task_repo.create(new_task)
+                self.queue.send_task(str(new_task.id))
+                counter += 1
+                
+                logger.info(
+                    f"[Scheduler] Dependency triggered: "
+                    f"Job '{job.name}' (Task: {task.id}) -> "
+                    f"Dispatched downstream Job '{next_job.name}' (New Task: {new_task.id})"
+                )
+
+        return counter
