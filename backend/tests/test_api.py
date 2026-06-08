@@ -21,6 +21,37 @@ def test_create_job(client):
     assert response.json()["name"] == "job-a"
 
 
+def test_create_job_without_cron_becomes_one_time_job(client, db_session):
+    response = client.post(
+        "/api/v1/jobs",
+        json={
+            "name": "job-one-time",
+            "cron_expression": None,
+            "action_type": "shell",
+            "action_config": {"command": "echo one-time", "timeout_seconds": 5},
+            "enabled": True,
+            "concurrency_policy": "allow",
+            "max_retries": 0,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cron_expression"] is None
+    assert body["next_fire_at"] is None
+
+    job = db_session.query(Job).filter_by(name="job-one-time").one()
+    assert job.job_type == "normal"
+    assert job.cron_expression is None
+    assert job.next_fire_at is None
+
+    task = db_session.query(Task).filter_by(job_id=job.id).one()
+    assert task.status == "pending"
+    assert task.trigger_type == "scheduled"
+
+    messages = client.app.state.normal_queue_client.receive_tasks(max_messages=1, wait_time_seconds=0)
+    assert len(messages) == 1
+
+
 def test_list_jobs(client):
     payloads = [
         {
@@ -114,6 +145,37 @@ def test_list_jobs_supports_filters_and_pagination(client):
     assert body["total"] == 3
     assert body["total_pages"] == 2
     assert len(body["items"]) == 2
+
+
+def test_update_job_can_clear_cron_expression(client, db_session):
+    create_response = client.post(
+        "/api/v1/jobs",
+        json={
+            "name": "job-to-clear",
+            "cron_expression": "*/5 * * * *",
+            "action_type": "shell",
+            "action_config": {"command": "echo hi", "timeout_seconds": 5},
+            "enabled": True,
+            "concurrency_policy": "allow",
+            "max_retries": 0,
+        },
+    )
+    assert create_response.status_code == 200
+    job_id = create_response.json()["id"]
+
+    update_response = client.put(
+        f"/api/v1/jobs/{job_id}",
+        json={"cron_expression": None},
+    )
+    assert update_response.status_code == 200
+    body = update_response.json()
+    assert body["cron_expression"] is None
+    assert body["next_fire_at"] is None
+
+    job = db_session.query(Job).filter_by(id=job_id).one()
+    assert job.job_type == "normal"
+    assert job.cron_expression is None
+    assert job.next_fire_at is None
 
 
 def test_get_task_details(client, db_session):

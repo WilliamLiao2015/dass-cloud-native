@@ -10,6 +10,7 @@ from app.models.job import Job
 from app.models.task import Task
 from app.repositories.job_repository import JobRepository
 from app.repositories.task_repository import TaskRepository
+from app.queue.factory import get_normal_queue_client
 from app.schemas.job import HttpActionConfig, JobCreate, JobUpdate, ShellActionConfig
 from app.utils.cron import next_cron_time
 from app.utils.time import utcnow
@@ -61,6 +62,14 @@ def _build_runtime_spec(action_type: str, action_config: dict) -> dict:
     )
 
 
+def _normalize_cron_expression(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    trimmed = value.strip()
+    return trimmed or None
+
+
 class JobService:
     def __init__(self, db: Session):
         self.db = db
@@ -85,14 +94,15 @@ class JobService:
         # scheduler 不碰它（list_updated_since 只撈 job_type='scheduled'），只能靠 API /trigger
         # 手動觸發進 normal queue。model 已允許 cron_expression / next_fire_at 為 NULL。
         now = utcnow()
-        if payload.cron_expression:
-            if not croniter.is_valid(payload.cron_expression):
+        cron_expression = _normalize_cron_expression(payload.cron_expression)
+        if cron_expression:
+            if not croniter.is_valid(cron_expression):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Invalid cron expression",
                 )
             job_type = "scheduled"
-            next_fire_at = next_cron_time(payload.cron_expression, now)
+            next_fire_at = next_cron_time(cron_expression, now)
         else:
             job_type = "normal"
             next_fire_at = None
@@ -100,7 +110,7 @@ class JobService:
         job = Job(
             name=payload.name,
             job_type=job_type,
-            cron_expression=payload.cron_expression,
+            cron_expression=cron_expression,
             action_type=payload.action_type,
             action_config=payload.action_config,
             # S4: 同時填 runtime_spec 給 worker 直接吃
@@ -111,7 +121,19 @@ class JobService:
             next_fire_at=next_fire_at,
         )
 
-        return self.jobs.create(job)
+        job = self.jobs.create(job)
+
+        if job.job_type == "normal" and job.enabled:
+            task = Task(
+                job_id=job.id,
+                status="pending",
+                trigger_type="scheduled",
+                retry_count=0,
+            )
+            task = self.tasks.create(task)
+            get_normal_queue_client().send_task(str(task.id))
+
+        return job
 
     def list_jobs(
         self,
@@ -162,11 +184,21 @@ class JobService:
         job = self.get_job(job_id)
         data = payload.model_dump(exclude_unset=True)
 
-        if "cron_expression" in data and not croniter.is_valid(data["cron_expression"]):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Invalid cron expression",
-            )
+        cron_expression = data.get("cron_expression", job.cron_expression)
+        normalized_cron_expression = _normalize_cron_expression(cron_expression)
+
+        if "cron_expression" in data:
+            if normalized_cron_expression:
+                if not croniter.is_valid(normalized_cron_expression):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Invalid cron expression",
+                    )
+                job.job_type = "scheduled"
+                job.next_fire_at = next_cron_time(normalized_cron_expression, utcnow())
+            else:
+                job.job_type = "normal"
+                job.next_fire_at = None
 
         action_type = data.get("action_type", job.action_type)
         action_config = data.get("action_config", job.action_config)
@@ -177,8 +209,9 @@ class JobService:
             ShellActionConfig.model_validate(action_config)
         for key, value in data.items():
             setattr(job, key, value)
-        if payload.cron_expression:
-            job.next_fire_at = next_cron_time(payload.cron_expression, utcnow())
+
+        if "cron_expression" in data:
+            job.cron_expression = normalized_cron_expression
 
         # S4: action_type / action_config 任何一個動過都要同步 runtime_spec。
         if "action_type" in data or "action_config" in data:

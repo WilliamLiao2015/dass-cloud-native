@@ -3,7 +3,11 @@
 import Link from "next/link"
 
 import type { Job } from "../../../types"
-import { formatActionConfig, formatDateTime } from "../_lib/jobs-list.utils"
+import {
+  formatActionConfig,
+  formatCronExpression,
+  formatDateTime,
+} from "../_lib/jobs-list.utils"
 
 function JobBadge({ enabled }: { enabled: boolean }) {
   return (
@@ -67,7 +71,9 @@ export function JobsListTable({ jobs }: { jobs: Job[] }) {
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-muted">
-                  <div className="font-mono text-fg">{job.cron_expression}</div>
+                  <div className="font-mono text-fg">
+                    {formatCronExpression(job.cron_expression)}
+                  </div>
                   <div className="mt-1 text-xs text-muted">
                     Concurrency: {job.concurrency_policy}
                   </div>

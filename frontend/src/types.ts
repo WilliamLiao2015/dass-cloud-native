@@ -10,13 +10,13 @@ export type TaskStatus =
 export interface Job {
   id: string
   name: string
-  cron_expression: string
+  cron_expression: string | null
   action_type: ActionType
   action_config: Record<string, unknown>
   enabled: boolean
   concurrency_policy: ConcurrencyPolicy
   max_retries: number
-  next_fire_at: string
+  next_fire_at: string | null
   created_at: string
   updated_at: string
 }

@@ -9,6 +9,7 @@ import type { FormEvent } from "react"
 import { api } from "../../../api/client"
 import { useToast } from "../../../hooks/use-toast"
 import type { ActionType, ConcurrencyPolicy, Job } from "../../../types"
+import { normalizeCronExpression } from "../_lib/job-form.utils"
 
 type JobFormState = {
   name: string
@@ -143,10 +144,6 @@ function validateForm(form: JobFormState) {
     errors.name = "Job name is required."
   }
 
-  if (!form.cron_expression.trim()) {
-    errors.cron_expression = "Cron expression is required."
-  }
-
   const maxRetries = Number.parseInt(form.max_retries, 10)
   if (!Number.isInteger(maxRetries) || maxRetries < 0) {
     errors.max_retries = "Max retries must be a non-negative integer."
@@ -229,6 +226,7 @@ export default function JobFormPage() {
       }
 
       const maxRetries = Number.parseInt(form.max_retries, 10)
+      const cronExpression = normalizeCronExpression(form.cron_expression)
 
       if (form.action_type === "http") {
         const actionErrors: JobFormErrors = {}
@@ -249,7 +247,7 @@ export default function JobFormPage() {
 
         const payload = {
           name: form.name.trim(),
-          cron_expression: form.cron_expression.trim(),
+          cron_expression: cronExpression,
           action_type: form.action_type,
           action_config: {
             method: form.http.method.trim() || "GET",
@@ -270,7 +268,7 @@ export default function JobFormPage() {
 
       const payload = {
         name: form.name.trim(),
-        cron_expression: form.cron_expression.trim(),
+        cron_expression: normalizeCronExpression(form.cron_expression),
         action_type: form.action_type,
         action_config: {
           command: form.shell.command.trim(),
@@ -405,6 +403,9 @@ export default function JobFormPage() {
               placeholder="*/5 * * * *"
               value={form.cron_expression}
             />
+            <p className="text-xs text-muted">
+              Leave this blank for a one-time job.
+            </p>
             <ErrorText>{errors.cron_expression}</ErrorText>
           </label>
         </div>

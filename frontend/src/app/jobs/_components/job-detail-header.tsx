@@ -59,8 +59,8 @@ export function JobDetailHeader({
         <div>
           <h2 className="text-3xl font-semibold text-fg">{jobName}</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Inspect the schedule, review the action payload, trigger it
-            manually, or remove the job if it is no longer needed.
+            Inspect the schedule or one-time setup, review the action payload,
+            trigger it manually, or remove the job if it is no longer needed.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs text-muted">

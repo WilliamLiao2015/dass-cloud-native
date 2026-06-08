@@ -17,7 +17,7 @@ export function JobsListEmpty({
       <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
         {filtersApplied
           ? "Try widening the search or clearing the filters to see more results."
-          : "Create your first scheduled job to start automating tasks on a cron schedule."}
+          : "Create your first job to start automating tasks on a cron schedule or as a one-time run."}
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
         {filtersApplied ? (
