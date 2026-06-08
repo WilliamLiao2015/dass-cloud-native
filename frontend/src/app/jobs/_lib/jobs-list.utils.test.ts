@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Job } from "../../../types"
 import {
   formatActionConfig,
+  formatCronExpression,
   formatDateTime,
   getJobsRange,
 } from "./jobs-list.utils"
@@ -26,6 +27,10 @@ afterEach(() => {
 })
 
 describe("formatDateTime", () => {
+  it("returns one-time for null input", () => {
+    expect(formatDateTime(null)).toBe("One-time")
+  })
+
   it("returns the original value when the input is not a valid date", () => {
     expect(formatDateTime("not-a-date")).toBe("not-a-date")
   })
@@ -43,6 +48,17 @@ describe("formatDateTime", () => {
       dateStyle: "medium",
       timeStyle: "short",
     })
+  })
+})
+
+describe("formatCronExpression", () => {
+  it("returns one-time when cron is blank or missing", () => {
+    expect(formatCronExpression(null)).toBe("One-time")
+    expect(formatCronExpression("   ")).toBe("One-time")
+  })
+
+  it("keeps the cron expression when provided", () => {
+    expect(formatCronExpression("*/5 * * * *")).toBe("*/5 * * * *")
   })
 })
 

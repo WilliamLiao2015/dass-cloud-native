@@ -1,6 +1,14 @@
 import type { Job } from "../../../types"
 
-export function formatDateTime(value: string) {
+export function formatCronExpression(value: string | null) {
+  return value && value.trim() ? value : "One-time"
+}
+
+export function formatDateTime(value: string | null) {
+  if (!value) {
+    return "One-time"
+  }
+
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {

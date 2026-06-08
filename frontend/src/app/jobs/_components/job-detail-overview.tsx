@@ -1,6 +1,9 @@
 "use client"
 
-import { formatDateTime } from "../_lib/jobs-list.utils"
+import {
+  formatCronExpression,
+  formatDateTime,
+} from "../_lib/jobs-list.utils"
 
 function formatActionConfig(actionConfig: Record<string, unknown>) {
   const entries = Object.entries(actionConfig ?? {})
@@ -22,9 +25,9 @@ export function JobDetailOverview({
   actionConfig,
 }: {
   createdAt: string
-  cronExpression: string
+  cronExpression: string | null
   maxRetries: number
-  nextFireAt: string
+  nextFireAt: string | null
   tasksCount: number
   updatedAt: string
   actionConfig: Record<string, unknown>
@@ -40,7 +43,9 @@ export function JobDetailOverview({
             <p className="text-xs uppercase tracking-[0.24em] text-muted">
               Cron
             </p>
-            <p className="mt-2 font-mono text-sm text-fg">{cronExpression}</p>
+            <p className="mt-2 font-mono text-sm text-fg">
+              {formatCronExpression(cronExpression)}
+            </p>
           </div>
           <div className="rounded-2xl border border-line bg-panel-strong p-4">
             <p className="text-xs uppercase tracking-[0.24em] text-muted">

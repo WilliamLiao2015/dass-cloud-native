@@ -36,15 +36,21 @@ def db_session(engine):
 
 @pytest.fixture
 def client(db_session, monkeypatch):
+    normal_queue = MemoryQueueClient()
+
     def override_get_db():
         try:
             yield db_session
         finally:
             pass
 
-    monkeypatch.setattr("app.api.v1.jobs.get_normal_queue_client", lambda: MemoryQueueClient())
+    monkeypatch.setattr("app.api.v1.jobs.get_normal_queue_client", lambda: normal_queue)
+    monkeypatch.setattr("app.services.job_service.get_normal_queue_client", lambda: normal_queue)
     monkeypatch.setattr("app.api.v1.tasks.get_retry_queue_client", lambda: MemoryQueueClient())
+    app.state.normal_queue_client = normal_queue
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+    if hasattr(app.state, "normal_queue_client"):
+        delattr(app.state, "normal_queue_client")
