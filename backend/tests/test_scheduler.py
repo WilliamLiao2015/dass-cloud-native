@@ -60,7 +60,7 @@ class TestSchedulerService:
         normal_queue = MemoryQueueClient()
         scheduled_queue = MemoryQueueClient()
         _job(db_session)
-        
+
         factory = sessionmaker(bind=db_session.get_bind())
         # 新的實作中 SchedulerService 只需要傳入 scheduled_queue
         service = SchedulerService(factory, scheduled_queue)
@@ -152,3 +152,47 @@ class TestSchedulerService:
         service.recover_orphans()
         # MemoryQueueClient 沒 visibility 概念；確認 queue 是空的，沒被偷塞 message
         assert queue._queue.empty()
+
+    def test_trigger_dependent_jobs(self, db_session):
+        """Scheduler 應該能偵測剛成功的 Task，並觸發其設定的 next_job_id。"""
+        queue = MemoryQueueClient()
+        factory = sessionmaker(bind=db_session.get_bind())
+        service = SchedulerService(factory, queue)
+
+        # 1. 建立下游 Job B
+        job_b = _job(db_session, name="Job B")
+
+        # 2. 建立上游 Job A，並把 next_job_id 指向 Job B
+        job_a = _job(db_session, name="Job A")
+        job_a.next_job_id = str(job_b.id)
+        db_session.commit()
+
+        # 3. 模擬 Worker 剛完成 Job A，建立一筆成功的 Task
+        task_a = Task(
+            job_id=str(job_a.id),
+            status="success",
+            trigger_type="scheduled",
+            retry_count=0,
+            processed_for_chaining=False,
+        )
+        db_session.add(task_a)
+        db_session.commit()
+
+        # 4. 執行 Scheduler 的相依性檢查邏輯
+        triggered_count = service.trigger_dependent_jobs()
+
+        # 5. 驗證結果
+        assert triggered_count == 1
+
+        # 驗證 Task A 已經被標記為處理過，避免重複觸發
+        db_session.refresh(task_a)
+        assert task_a.processed_for_chaining is True
+
+        # 驗證系統有幫 Job B 建立一筆新的 Task
+        tasks_b = db_session.query(Task).filter(Task.job_id == job_b.id).all()
+        assert len(tasks_b) == 1
+        assert tasks_b[0].status == "pending"
+        assert tasks_b[0].trigger_type == "dependency"
+
+        # 驗證這個新的 Task 有被正確推入 Queue 準備執行
+        assert queue._queue.qsize() == 1

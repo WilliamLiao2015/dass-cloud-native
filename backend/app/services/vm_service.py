@@ -32,7 +32,7 @@ _PROJECT_LABEL = "com.dass.project=dass"
 _SERVICE_LABEL = "com.dass.service=worker"
 _AUTOSCALED_LABEL = "com.dass.autoscaled=true"
 
-_TEMPLATE_CONTAINER_NAME = os.environ.get("DASS_WORKER_TEMPLATE", "dass_alt-worker-1")
+_TEMPLATE_CONTAINER_NAME = os.environ.get("DASS_WORKER_TEMPLATE", "dass-worker-1")
 
 
 class VMService:
@@ -104,7 +104,7 @@ class VMService:
         env_list = attrs["Config"].get("Env") or []
         cmd = attrs["Config"].get("Cmd")
         networks = attrs.get("NetworkSettings", {}).get("Networks", {})
-        network_name = next(iter(networks.keys()), "dass_alt_dass-net")
+        network_name = next(iter(networks.keys()), "dass_dass-net")
 
         env_dict: dict[str, str] = {}
         for entry in env_list:
@@ -115,7 +115,7 @@ class VMService:
         created: list[str] = []
         for _ in range(count):
             suffix = uuid4().hex[:8]
-            name = f"dass_alt-worker-autoscaled-{suffix}"
+            name = f"dass-worker-autoscaled-{suffix}"
             env_dict["DASS_WORKER_ID"] = f"worker-as-{suffix}"
             try:
                 container = self._client.containers.run(

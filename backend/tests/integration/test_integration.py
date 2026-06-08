@@ -86,7 +86,13 @@ def test_scheduler_dispatch_enqueues_to_sqs(main_db, make_job, purge_queues):
     )
     main_db.flush()
 
-    service = SchedulerService(main_db, normal_sqs, scheduled_sqs)
+    from sqlalchemy.orm import sessionmaker
+    factory = sessionmaker(bind=main_db.get_bind())
+    
+    # 修改為只傳入 session_maker 與 scheduled_sqs
+    service = SchedulerService(factory, scheduled_sqs)
+    service.sync_jobs()
+    
     dispatched = service.dispatch_due_jobs()
     assert dispatched >= 1
 
@@ -188,7 +194,11 @@ def test_orphan_recovery_on_real_postgres(main_db, make_job, purge_queues):
     main_db.flush()
 
     queue = MemoryQueueClient()
-    service = SchedulerService(main_db, queue, queue)
+    from sqlalchemy.orm import sessionmaker
+    factory = sessionmaker(bind=main_db.get_bind())
+    service = SchedulerService(factory, queue)
+    service.sync_jobs()
+    
     recovered = service.recover_orphans()
 
     assert recovered >= 1
