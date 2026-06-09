@@ -424,7 +424,7 @@ watch -n5 'kubectl get pods -n dass | grep worker'
 
 公式：`desired_pods = ceil(queue_depth / 20)`，範圍 `[1, 10]`。
 
-**Docker Compose 模式** 有一個 `autoscaler` container（`autoscaler_service.py`），透過 Docker daemon API 動態新增/移除 worker container。若壓測後留下殘餘 worker：
+**Docker Compose 模式** 有一個 `autoscaler` container，透過 Docker daemon API 動態新增/移除 worker container，並根據每個 `api-server` replica 的即時請求壓力自動擴縮 API 層。若壓測後留下殘餘 worker：
 
 ```bash
 docker ps -q --filter "label=com.dass.autoscaled=true" | xargs -r docker kill
@@ -587,11 +587,9 @@ To trust the local CA on macOS, open `infra/traefik/pki/rootCA.crt` and add it t
 
 ### Load Balancing the API
 
-Traefik can distribute traffic across multiple `api-server` replicas. After the stack is up, scale the API service and Traefik will spread requests across the running containers:
+Traefik can distribute traffic across multiple `api-server` replicas. In Compose, the bundled autoscaler now grows and shrinks the API fleet automatically based on per-replica in-flight requests, so you normally do not need to pin a fixed replica count.
 
-```bash
-docker compose up -d --scale api-server=3
-```
+If you still want to inspect the routing behavior manually, you can temporarily start extra replicas with `docker compose up -d --scale api-server=3`, and Traefik will spread requests across them.
 
 Keep the frontend at a single replica unless you also want to scale it intentionally; the public entrypoint remains `https://localhost:8443`.
 
@@ -642,5 +640,5 @@ Note: this minimal setup skips `postgres-replica`. With `DASS_REPLICA_DATABASE_U
 - The scheduler runs every `DASS_SCHEDULER_INTERVAL_SECONDS` (default `5`) and is responsible for deciding when work should be dispatched.
 - Each task executes inside an ephemeral Docker container spawned by the worker via the host Docker daemon; the job's `runtime_spec` (derived from `action_type` + `action_config`) decides image and command. Both `http` and `shell` action types compile down to this container model.
 - Workers claim tasks atomically and report results back to PostgreSQL.
-- The autoscaler watches queue depth and spawns/reaps extra workers — see the Autoscaling section above.
+- The autoscaler watches queue depth for workers and per-replica request load for `api-server`, then spawns/reaps extra containers — see the Autoscaling section above.
 - Shell execution is supported for local and internal use, but it is dangerous in production and should be restricted carefully.
