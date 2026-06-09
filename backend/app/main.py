@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import threading
+import time
+
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -17,6 +21,16 @@ configure_logging(settings.log_level)
 app = FastAPI(title="dass API", version="0.1.0")
 DEFAULT_TLS_ORIGINS = {"https://localhost:8443", "https://127.0.0.1:8443"}
 DEFAULT_HTTP_ORIGINS = {"http://localhost", "http://127.0.0.1", "http://localhost:3000", "http://127.0.0.1:3000"}
+_METRICS_EXCLUDED_PREFIXES = ("/health", "/metrics", "/docs", "/redoc", "/openapi.json", "/internal/")
+
+app.state.request_metrics = {
+    "inflight": 0,
+    "total_requests": 0,
+    "failed_requests": 0,
+    "total_duration_seconds": 0.0,
+    "last_duration_seconds": 0.0,
+}
+app.state.request_metrics_lock = threading.Lock()
 
 
 def _normalize_cors_origins(raw: str) -> list[str]:
@@ -53,6 +67,35 @@ app.include_router(tasks_router)
 app.include_router(vms_router)
 
 
+@app.middleware("http")
+async def record_request_metrics(request: Request, call_next):
+    path = request.url.path
+    if path.startswith(_METRICS_EXCLUDED_PREFIXES):
+        return await call_next(request)
+
+    metrics = app.state.request_metrics
+    lock = app.state.request_metrics_lock
+    started = time.perf_counter()
+
+    with lock:
+        metrics["inflight"] += 1
+
+    try:
+        response = await call_next(request)
+        return response
+    except Exception:
+        with lock:
+            metrics["failed_requests"] += 1
+        raise
+    finally:
+        elapsed = time.perf_counter() - started
+        with lock:
+            metrics["inflight"] -= 1
+            metrics["total_requests"] += 1
+            metrics["total_duration_seconds"] += elapsed
+            metrics["last_duration_seconds"] = elapsed
+
+
 @app.get("/health")
 def health():
     """Health check endpoint：確認 DB 連線正常。
@@ -76,3 +119,23 @@ def metrics():
         num_jobs = db.execute(text("SELECT count(*) FROM jobs")).scalar()
         num_tasks = db.execute(text("SELECT count(*) FROM tasks")).scalar()
     return {"jobs": num_jobs, "tasks": num_tasks}
+
+
+@app.get("/internal/instance-metrics")
+def instance_metrics():
+    """Return per-container load data for the API autoscaler."""
+    metrics = app.state.request_metrics
+    lock = app.state.request_metrics_lock
+    with lock:
+        total_requests = metrics["total_requests"]
+        total_duration_seconds = metrics["total_duration_seconds"]
+        average_duration_seconds = (
+            total_duration_seconds / total_requests if total_requests else 0.0
+        )
+        return {
+            "inflight": metrics["inflight"],
+            "total_requests": total_requests,
+            "failed_requests": metrics["failed_requests"],
+            "average_duration_ms": round(average_duration_seconds * 1000, 3),
+            "last_duration_ms": round(metrics["last_duration_seconds"] * 1000, 3),
+        }

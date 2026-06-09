@@ -14,6 +14,7 @@ from app.queue.factory import (
     get_retry_queue_client,
     get_scheduled_queue_client,
 )
+from app.services.api_autoscaler_service import APIAutoScaler
 from app.services.autoscaler_service import AutoScaler
 from app.services.scheduler_service import SchedulerService
 from app.services.worker_service import WorkerService
@@ -71,10 +72,13 @@ def run_autoscaler() -> None:
         )
         return
 
-    autoscaler = AutoScaler(settings)
-    if not autoscaler.enabled:
+    api_autoscaler = APIAutoScaler(settings)
+    worker_autoscaler = AutoScaler(settings)
+
+    if not api_autoscaler.enabled and not worker_autoscaler.enabled:
         logger.info(
-            "Autoscaler disabled (queue_backend=%s). Exiting.",
+            "Autoscaler disabled (execution_backend=%s, queue_backend=%s). Exiting.",
+            settings.execution_backend,
             settings.queue_backend,
         )
         return
@@ -84,9 +88,13 @@ def run_autoscaler() -> None:
 
     while True:
         try:
-            autoscaler.apply()
+            api_autoscaler.apply()
         except Exception:
-            logger.exception("Autoscaler cycle failed")
+            logger.exception("API autoscaler cycle failed")
+        try:
+            worker_autoscaler.apply()
+        except Exception:
+            logger.exception("Worker autoscaler cycle failed")
         time.sleep(interval)
 
 
