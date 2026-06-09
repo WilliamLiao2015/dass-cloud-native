@@ -143,7 +143,7 @@ async def amain() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--count", type=int, default=1000, help="number of jobs to create (default 1000)")
     parser.add_argument("--concurrency", type=int, default=32, help="parallel HTTP requests (default 32)")
-    parser.add_argument("--api", default="https://localhost:8443", help="API base URL")
+    parser.add_argument("--api", default="https://dass.localhost:8443", help="API base URL")
     parser.add_argument("--ca-cert", default=str(DEFAULT_CA_CERT), help="CA certificate bundle to trust")
     parser.add_argument("--insecure", action="store_true", help="disable TLS verification")
     parser.add_argument("--trigger", action="store_true", help="after creation, fire each job once via /trigger")

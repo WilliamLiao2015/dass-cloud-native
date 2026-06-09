@@ -15,8 +15,19 @@ settings = get_settings()
 configure_logging(settings.log_level)
 
 app = FastAPI(title="dass API", version="0.1.0")
-DEFAULT_TLS_ORIGINS = {"https://localhost:8443", "https://127.0.0.1:8443"}
-DEFAULT_HTTP_ORIGINS = {"http://localhost", "http://127.0.0.1", "http://localhost:3000", "http://127.0.0.1:3000"}
+DEFAULT_TLS_ORIGINS = {
+    "https://dass.localhost:8443",
+    "https://localhost:8443",
+    "https://127.0.0.1:8443",
+}
+DEFAULT_HTTP_ORIGINS = {
+    "http://dass.localhost",
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://dass.localhost:3000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+}
 
 
 def _normalize_cors_origins(raw: str) -> list[str]:

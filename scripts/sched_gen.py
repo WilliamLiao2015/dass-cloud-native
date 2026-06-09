@@ -92,7 +92,7 @@ async def amain() -> int:
     p.add_argument("--watch", type=int, default=140, help="seconds to let the scheduler fire before cleanup (default 140 ≈ 2 boundaries)")
     p.add_argument("--keep", action="store_true", help="do NOT delete the jobs afterwards (they keep firing every minute)")
     p.add_argument("--cleanup", action="store_true", help="only delete jobs matching --prefix, then exit")
-    p.add_argument("--api", default="https://localhost:8443", help="API base URL")
+    p.add_argument("--api", default="https://dass.localhost:8443", help="API base URL")
     p.add_argument("--ca-cert", default=str(DEFAULT_CA_CERT), help="CA bundle to trust")
     p.add_argument("--insecure", action="store_true", help="disable TLS verification")
     p.add_argument("--timeout", type=float, default=15.0, help="per-request timeout seconds")

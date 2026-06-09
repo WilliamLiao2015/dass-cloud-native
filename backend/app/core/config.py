@@ -17,7 +17,17 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost,http://127.0.0.1,https://localhost:8443,https://127.0.0.1:8443,http://localhost:3000,http://127.0.0.1:3000"
+    cors_origins: str = (
+        "http://dass.localhost,"
+        "http://localhost,"
+        "http://127.0.0.1,"
+        "https://dass.localhost:8443,"
+        "https://localhost:8443,"
+        "https://127.0.0.1:8443,"
+        "http://dass.localhost:3000,"
+        "http://localhost:3000,"
+        "http://127.0.0.1:3000"
+    )
 
     database_url: str = "postgresql+psycopg://dass:dass@postgres:5432/dass"
     database_echo: bool = False

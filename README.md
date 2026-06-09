@@ -136,7 +136,7 @@ curl http://localhost:8000/health
 # 預期：{"status":"ok","service":"dass"}
 ```
 
-如果你也有啟動 Traefik，則可以改用公開入口 `https://localhost:8443`；本機憑證鏈會放在 `infra/traefik/pki/rootCA.crt`。
+如果你也有啟動 Traefik，則可以改用公開入口 `https://dass.localhost:8443`；本機憑證鏈會放在 `infra/traefik/pki/rootCA.crt`。`*.localhost` 會自動指向本機，不需要額外設定 `/etc/hosts`。
 
 ---
 
@@ -491,7 +491,7 @@ cd backend
 | `--count N` | number of jobs to create (default 1000) |
 | `--concurrency N` | parallel in-flight HTTP requests (default 32) |
 | `--trigger` | after creating, fire each job once via `/trigger` |
-| `--api URL` | API base URL (default `https://localhost:8443`) |
+| `--api URL` | API base URL (default `https://dass.localhost:8443`) |
 
 `load_test.sh` 會沿用這個預設值；如果你只啟動了純 Docker Compose 的 API，而沒有 Traefik，請加上 `--api http://localhost:8000` 自行覆蓋。
 
@@ -581,7 +581,7 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 | `GET` | `/health` | Health check |
 | `GET` | `/metrics` | Job and task counts |
 
-Interactive API documentation is available at `https://localhost:8443/docs` when the stack is running.
+Interactive API documentation is available at `https://dass.localhost:8443/docs` when the stack is running.
 
 To trust the local CA on macOS, open `infra/traefik/pki/rootCA.crt` and add it to your login keychain as a trusted root certificate.
 
@@ -593,7 +593,7 @@ Traefik can distribute traffic across multiple `api-server` replicas. After the 
 docker compose up -d --scale api-server=3
 ```
 
-Keep the frontend at a single replica unless you also want to scale it intentionally; the public entrypoint remains `https://localhost:8443`.
+Keep the frontend at a single replica unless you also want to scale it intentionally; the public entrypoint remains `https://dass.localhost:8443`.
 
 For a real public deployment, replace the internal CA with Traefik ACME/Let’s Encrypt and a real DNS name. The compose setup here is meant for local and lab environments where you want production-style TLS semantics without public certificate issuance.
 

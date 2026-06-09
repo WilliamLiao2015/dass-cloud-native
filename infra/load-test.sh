@@ -3,10 +3,10 @@
 #
 # Usage:
 #   ./infra/load-test.sh [job_count]            # 預設 100
-#   DASS_API_URL=https://localhost:8443 ./infra/load-test.sh 200   # 走 Traefik
+#   DASS_API_URL=https://dass.localhost:8443 ./infra/load-test.sh 200   # 走 Traefik
 #
-# 預設打 http://localhost:8000（start-mode1/2 直接暴露的 API port，未啟動 Traefik）。
-# 若你另外有跑 Traefik，可用 DASS_API_URL 覆蓋成 https://localhost:8443。
+# 預設打 https://dass.localhost:8443（Traefik 公開入口）。
+# 如果你只啟動純 Docker Compose 的 API，請用 DASS_API_URL=http://localhost:8000 覆蓋。
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -14,7 +14,7 @@ cd "$REPO_ROOT"
 export COMPOSE_IGNORE_ORPHANS=true
 
 JOB_COUNT="${1:-10000}"
-API_URL="${DASS_API_URL:-http://localhost:8000}"
+API_URL="${DASS_API_URL:-https://dass.localhost:8443}"
 
 command -v docker >/dev/null 2>&1 || { echo "ERROR: 找不到 docker，請先安裝：https://docs.docker.com/engine/install/"; exit 1; }
 docker info >/dev/null 2>&1 || { echo "ERROR: Docker daemon 未運行，請先啟動 Docker。"; exit 1; }

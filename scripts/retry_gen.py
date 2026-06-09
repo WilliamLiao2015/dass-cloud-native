@@ -67,7 +67,7 @@ async def amain() -> int:
     p.add_argument("--count", type=int, default=200, help="number of failing jobs to create+trigger (default 200)")
     p.add_argument("--max-retries", type=int, default=3, help="retries per job before final_failed (default 3)")
     p.add_argument("--concurrency", type=int, default=32, help="parallel HTTP requests (default 32)")
-    p.add_argument("--api", default="https://localhost:8443", help="API base URL")
+    p.add_argument("--api", default="https://dass.localhost:8443", help="API base URL")
     p.add_argument("--ca-cert", default=str(DEFAULT_CA_CERT), help="CA bundle to trust")
     p.add_argument("--insecure", action="store_true", help="disable TLS verification")
     p.add_argument("--timeout", type=float, default=15.0, help="per-request timeout seconds")
