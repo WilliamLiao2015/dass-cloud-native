@@ -314,6 +314,13 @@ export default function JobFormPage() {
     () => (isEditing ? "Edit Job" : "Create Job"),
     [isEditing]
   )
+  const presetTextClass = isEditing ? "text-fg" : "text-accent/90 font-medium"
+  const strongFieldBaseClass =
+    "rounded-2xl border border-line bg-panel-strong px-4 py-2.5 outline-none transition placeholder:text-muted/45 focus:border-accent/50"
+  const panelFieldBaseClass =
+    "rounded-2xl border border-line bg-panel px-4 py-2.5 outline-none transition placeholder:text-muted/45 focus:border-accent/50"
+  const panelTextareaBaseClass =
+    "min-h-32 rounded-2xl border border-line bg-panel px-4 py-3 outline-none transition placeholder:text-muted/45 focus:border-accent/50"
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -380,7 +387,7 @@ export default function JobFormPage() {
           <label className="flex flex-col gap-2 text-sm text-muted">
             <span>Job name</span>
             <input
-              className="rounded-2xl border border-line bg-panel-strong px-4 py-2.5 text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+              className={`${strongFieldBaseClass} text-fg`}
               onChange={event =>
                 setForm(current => ({ ...current, name: event.target.value }))
               }
@@ -393,7 +400,7 @@ export default function JobFormPage() {
           <label className="flex flex-col gap-2 text-sm text-muted">
             <span>Cron expression</span>
             <input
-              className="rounded-2xl border border-line bg-panel-strong px-4 py-2.5 font-mono text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+              className={`${strongFieldBaseClass} font-mono ${presetTextClass}`}
               onChange={event =>
                 setForm(current => ({
                   ...current,
@@ -414,7 +421,7 @@ export default function JobFormPage() {
           <label className="flex flex-col gap-2 text-sm text-muted">
             <span>Action type</span>
             <select
-              className="rounded-2xl border border-line bg-panel-strong px-4 py-2.5 text-fg outline-none transition focus:border-accent/50"
+              className={`${strongFieldBaseClass} ${presetTextClass}`}
               onChange={event =>
                 setForm(current => ({
                   ...current,
@@ -431,7 +438,7 @@ export default function JobFormPage() {
           <label className="flex flex-col gap-2 text-sm text-muted">
             <span>Concurrency policy</span>
             <select
-              className="rounded-2xl border border-line bg-panel-strong px-4 py-2.5 text-fg outline-none transition focus:border-accent/50"
+              className={`${strongFieldBaseClass} ${presetTextClass}`}
               onChange={event =>
                 setForm(current => ({
                   ...current,
@@ -449,7 +456,7 @@ export default function JobFormPage() {
           <label className="flex flex-col gap-2 text-sm text-muted">
             <span>Max retries</span>
             <input
-              className="rounded-2xl border border-line bg-panel-strong px-4 py-2.5 text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+              className={`${strongFieldBaseClass} ${presetTextClass}`}
               inputMode="numeric"
               min={0}
               onChange={event =>
@@ -495,7 +502,7 @@ export default function JobFormPage() {
               <label className="flex flex-col gap-2 text-sm text-muted">
                 <span>Method</span>
                 <input
-                  className="rounded-2xl border border-line bg-panel px-4 py-2.5 font-mono text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                  className={`${panelFieldBaseClass} font-mono ${presetTextClass}`}
                   onChange={event =>
                     setForm(current => ({
                       ...current,
@@ -511,7 +518,7 @@ export default function JobFormPage() {
               <label className="flex flex-col gap-2 text-sm text-muted">
                 <span>Timeout seconds</span>
                 <input
-                  className="rounded-2xl border border-line bg-panel px-4 py-2.5 text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                  className={`${panelFieldBaseClass} ${presetTextClass}`}
                   inputMode="numeric"
                   min={1}
                   onChange={event =>
@@ -533,7 +540,7 @@ export default function JobFormPage() {
             <label className="flex flex-col gap-2 text-sm text-muted">
               <span>URL</span>
               <input
-                className="rounded-2xl border border-line bg-panel px-4 py-2.5 text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                className={`${panelFieldBaseClass} text-fg`}
                 onChange={event =>
                   setForm(current => ({
                     ...current,
@@ -549,7 +556,7 @@ export default function JobFormPage() {
             <label className="flex flex-col gap-2 text-sm text-muted">
               <span>Headers JSON</span>
               <textarea
-                className="min-h-32 rounded-2xl border border-line bg-panel px-4 py-3 font-mono text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                className={`${panelTextareaBaseClass} font-mono text-sm ${presetTextClass}`}
                 onChange={event =>
                   setForm(current => ({
                     ...current,
@@ -565,7 +572,7 @@ export default function JobFormPage() {
             <label className="flex flex-col gap-2 text-sm text-muted">
               <span>Body</span>
               <textarea
-                className="min-h-32 rounded-2xl border border-line bg-panel px-4 py-3 font-mono text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                className={`${panelTextareaBaseClass} font-mono text-sm text-fg`}
                 onChange={event =>
                   setForm(current => ({
                     ...current,
@@ -592,7 +599,7 @@ export default function JobFormPage() {
             <label className="flex flex-col gap-2 text-sm text-muted">
               <span>Command</span>
               <textarea
-                className="min-h-32 rounded-2xl border border-line bg-panel px-4 py-3 font-mono text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                className={`${panelTextareaBaseClass} font-mono text-sm ${presetTextClass}`}
                 onChange={event =>
                   setForm(current => ({
                     ...current,
@@ -608,7 +615,7 @@ export default function JobFormPage() {
             <label className="flex flex-col gap-2 text-sm text-muted">
               <span>Timeout seconds</span>
               <input
-                className="rounded-2xl border border-line bg-panel px-4 py-2.5 text-fg outline-none transition placeholder:text-muted focus:border-accent/50"
+                className={`${panelFieldBaseClass} ${presetTextClass}`}
                 inputMode="numeric"
                 min={1}
                 onChange={event =>

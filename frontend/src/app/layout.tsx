@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Script from "next/script"
 import type { ReactNode } from "react"
 
 import { DashboardShell } from "../components/dashboard-shell"
@@ -12,7 +13,28 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive">{`
+          (() => {
+            try {
+              const storedTheme = window.localStorage.getItem("dass-theme")
+              const theme =
+                storedTheme === "light" || storedTheme === "dark"
+                  ? storedTheme
+                  : window.matchMedia("(prefers-color-scheme: dark)").matches
+                    ? "dark"
+                    : "light"
+
+              document.documentElement.dataset.theme = theme
+              document.documentElement.style.colorScheme = theme
+            } catch {
+              document.documentElement.dataset.theme = "dark"
+              document.documentElement.style.colorScheme = "dark"
+            }
+          })()
+        `}</Script>
+      </head>
       <body>
         <Providers>
           <DashboardShell>{children}</DashboardShell>
