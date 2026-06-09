@@ -19,7 +19,6 @@
 }
 
 :root {
-  color-scheme: dark;
   --page-bg: #050816;
   --page-fg: #e5eefc;
   --panel: #101a2f;
@@ -32,26 +31,25 @@
   --success-fg: #d1fae5;
   --danger: #fb7185;
   --danger-fg: #ffe4e6;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --page-bg: #f6f8fc;
-    --page-fg: #0f172a;
-    --panel: #ffffff;
-    --panel-strong: #e9eef8;
-    --line: #d5ddec;
-    --muted: #5b6980;
-    --accent: #0284c7;
-    --accent-fg: #f8fbff;
-    --success: #059669;
-    --success-fg: #ecfdf5;
-    --danger: #e11d48;
-    --danger-fg: #fff1f2;
-    --shadow-glow:
-      0 0 0 1px rgba(2, 132, 199, 0.12), 0 18px 40px rgba(15, 23, 42, 0.08);
-  }
+:root[data-theme="light"] {
+  --page-bg: #f6f8fc;
+  --page-fg: #0f172a;
+  --panel: #ffffff;
+  --panel-strong: #e9eef8;
+  --line: #d5ddec;
+  --muted: #5b6980;
+  --accent: #0284c7;
+  --accent-fg: #f8fbff;
+  --success: #059669;
+  --success-fg: #ecfdf5;
+  --danger: #e11d48;
+  --danger-fg: #fff1f2;
+  --shadow-glow:
+    0 0 0 1px rgba(2, 132, 199, 0.12), 0 18px 40px rgba(15, 23, 42, 0.08);
+  color-scheme: light;
 }
 
 /*
@@ -91,38 +89,27 @@ body {
     sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background:
-      radial-gradient(
-        circle at top left,
-        rgba(56, 189, 248, 0.14),
-        transparent 35%
-      ),
-      radial-gradient(
-        circle at top right,
-        rgba(59, 130, 246, 0.12),
-        transparent 30%
-      ),
-      linear-gradient(180deg, #091120 0%, #050816 100%);
-  }
+:root:not([data-theme="light"]) body,
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(56, 189, 248, 0.14),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(59, 130, 246, 0.12),
+      transparent 30%
+    ),
+    linear-gradient(180deg, #091120 0%, #050816 100%);
 }
 
-@media (prefers-color-scheme: light) {
-  body {
-    background:
-      radial-gradient(
-        circle at top left,
-        rgba(14, 165, 233, 0.14),
-        transparent 34%
-      ),
-      radial-gradient(
-        circle at top right,
-        rgba(59, 130, 246, 0.1),
-        transparent 32%
-      ),
-      linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
-  }
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.14), transparent 34%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
 }
 
 * {
