@@ -26,7 +26,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_API_BASE = "https://localhost:8443"
+DEFAULT_API_BASE = "https://dass.localhost:8443"
 DEFAULT_CA_CERT = REPO_ROOT / "infra" / "traefik" / "pki" / "rootCA.crt"
 
 

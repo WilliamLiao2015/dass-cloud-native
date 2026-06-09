@@ -160,7 +160,7 @@ services:
       com.dass.service: api-server
       traefik.enable: "true"
       traefik.docker.network: dass-net
-      traefik.http.routers.api.rule: Host(`localhost`, `127.0.0.1`) && (PathPrefix(`/api`) || Path(`/health`) || Path(`/metrics`) || Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
+      traefik.http.routers.api.rule: (Host(`dass.localhost`) || Host(`127.0.0.1`)) && (PathPrefix(`/api`) || Path(`/health`) || Path(`/metrics`) || Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
       traefik.http.routers.api.entrypoints: websecure
       traefik.http.routers.api.priority: "100"
       traefik.http.routers.api.service: api-server
@@ -268,7 +268,7 @@ services:
       com.dass.service: frontend
       traefik.enable: "true"
       traefik.docker.network: dass-net
-      traefik.http.routers.frontend.rule: Host(`localhost`, `127.0.0.1`) && PathPrefix(`/`)
+      traefik.http.routers.frontend.rule: (Host(`dass.localhost`) || Host(`127.0.0.1`)) && PathPrefix(`/`)
       traefik.http.routers.frontend.entrypoints: websecure
       traefik.http.routers.frontend.priority: "1"
       traefik.http.routers.frontend.service: frontend

@@ -4,10 +4,10 @@ set -eu
 PKI_DIR="${1:-/pki}"
 ROOT_CA_KEY="$PKI_DIR/rootCA.key"
 ROOT_CA_CRT="$PKI_DIR/rootCA.crt"
-SERVER_KEY="$PKI_DIR/localhost.key"
-SERVER_CRT="$PKI_DIR/localhost.crt"
-SERVER_CSR="$PKI_DIR/localhost.csr"
-SERVER_EXT="$PKI_DIR/localhost.ext"
+SERVER_KEY="$PKI_DIR/dass.localhost.key"
+SERVER_CRT="$PKI_DIR/dass.localhost.crt"
+SERVER_CSR="$PKI_DIR/dass.localhost.csr"
+SERVER_EXT="$PKI_DIR/dass.localhost.ext"
 ROOT_CA_SERIAL="$PKI_DIR/rootCA.srl"
 
 mkdir -p "$PKI_DIR"
@@ -25,7 +25,7 @@ fi
 if [ ! -f "$SERVER_KEY" ] || [ ! -f "$SERVER_CRT" ]; then
   openssl genrsa -out "$SERVER_KEY" 2048 >/dev/null 2>&1
   cat >"$SERVER_EXT" <<'EOF'
-subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1
+subjectAltName=DNS:dass.localhost,DNS:localhost,IP:127.0.0.1,IP:::1
 extendedKeyUsage=serverAuth
 keyUsage=digitalSignature,keyEncipherment
 basicConstraints=CA:FALSE
@@ -33,7 +33,7 @@ EOF
   openssl req -new \
     -key "$SERVER_KEY" \
     -out "$SERVER_CSR" \
-    -subj "/CN=localhost" >/dev/null 2>&1
+    -subj "/CN=dass.localhost" >/dev/null 2>&1
   openssl x509 -req \
     -in "$SERVER_CSR" \
     -CA "$ROOT_CA_CRT" \

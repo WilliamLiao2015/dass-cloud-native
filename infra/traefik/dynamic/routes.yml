@@ -1,14 +1,14 @@
 http:
   routers:
     api:
-      rule: (Host(`localhost`) || Host(`127.0.0.1`)) && (PathPrefix(`/api`) || Path(`/health`) || Path(`/metrics`) || Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
+      rule: (Host(`dass.localhost`) || Host(`127.0.0.1`)) && (PathPrefix(`/api`) || Path(`/health`) || Path(`/metrics`) || Path(`/docs`) || Path(`/redoc`) || Path(`/openapi.json`))
       entryPoints:
         - websecure
       priority: 100
       service: api-server
       tls: {}
     frontend:
-      rule: (Host(`localhost`) || Host(`127.0.0.1`)) && PathPrefix(`/`)
+      rule: (Host(`dass.localhost`) || Host(`127.0.0.1`)) && PathPrefix(`/`)
       entryPoints:
         - websecure
       priority: 1
