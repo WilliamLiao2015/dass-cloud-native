@@ -129,7 +129,9 @@ class SchedulerService:
                 # 【不管成功或失敗】，它的 next_fire_at 都已經算好了，必須存回快取並 Push 回 Heap 排隊
                 self._job_cache[str(job_id)] = job
                 if job.next_fire_at is not None:
-                    heapq.heappush(self._heap, (job.next_fire_at.timestamp(), str(job_id)))
+                    heapq.heappush(
+                        self._heap, (job.next_fire_at.timestamp(), str(job_id))
+                    )
 
                 # 只有真正發射成功才算 counter
                 if success:
@@ -186,31 +188,58 @@ class SchedulerService:
                 # 2. 標記為已處理，避免下次輪詢重複撈到
                 task_repo.mark_processed_for_chaining(task)
 
-                # 3. 檢查母 Job 有沒有設定 next_job_id
+                # 3. 取得這個 Task 所屬的 Job
                 job = job_repo.get(task.job_id)
-                if not job or not job.next_job_id:
-                    continue
+                if not job or not job.downstream_jobs:
+                    continue  # 如果這個 Job 已經被刪除，或者它根本沒有下游，就跳過
 
-                # 4. 檢查下游 Job 是否存在且啟用
-                next_job = job_repo.get(job.next_job_id)
-                if not next_job or not next_job.enabled:
-                    continue
-
-                # 5. 建立新的 Task 並推入 Queue
-                new_task = Task(
-                    job_id=str(next_job.id),
-                    status="pending",
-                    trigger_type="dependency",
-                    retry_count=0,
-                )
-                task_repo.create(new_task)
-                self.queue.send_task(str(new_task.id))
-                counter += 1
-                
                 logger.info(
-                    f"[Scheduler] Dependency triggered: "
-                    f"Job '{job.name}' (Task: {task.id}) -> "
-                    f"Dispatched downstream Job '{next_job.name}' (New Task: {new_task.id})"
+                    f"[Scheduler] Task {task.id} (Job {job.name}) finished. Checking its {len(job.downstream_jobs)} downstream jobs..."
                 )
+
+                # 4. 檢查它的每一個下游任務
+                for down_job in job.downstream_jobs:
+                    if not down_job.enabled:
+                        continue  # 如果下游任務被停用了，就不用管它
+
+                    logger.info(
+                        f"[Scheduler] Checking if downstream Job '{down_job.name}' is ready to run..."
+                    )
+                    all_upstreams_ready = True
+
+                    # 5. 針對這個下游任務，去檢查它的「所有上游」是不是都已經順利完成
+                    for up_job in down_job.upstream_jobs:
+                        # 從 Task 表撈出這個上游任務的「最新一筆執行紀錄」
+                        latest_up_task = (
+                            db.query(Task)
+                            .filter(Task.job_id == up_job.id)
+                            .order_by(Task.created_at.desc())
+                            .first()
+                        )
+
+                        # 如果連紀錄都沒有，或者最新狀態不是 success，就代表還沒準備好
+                        if not latest_up_task or latest_up_task.status != "success":
+                            logger.info(
+                                f"[Scheduler]   -> Blocked! Upstream Job '{up_job.name}' status is '{latest_up_task.status if latest_up_task else 'None'}'."
+                            )
+                            all_upstreams_ready = False
+                            break  # 只要有一個上游沒過關，就不需要再檢查其他上游了
+
+                    # 6. 如果所有上游都過關了，就發射這個下游任務！
+                    if all_upstreams_ready:
+                        new_task = Task(
+                            job_id=str(down_job.id),
+                            status="pending",
+                            trigger_type="dependency",
+                            retry_count=0,
+                        )
+                        task_repo.create(new_task)
+                        self.queue.send_task(str(new_task.id))
+                        counter += 1
+
+                        logger.info(
+                            f"[Scheduler]   -> All upstreams ready! Dependency triggered: "
+                            f"Job '{job.name}' -> Dispatched downstream Job '{down_job.name}' (New Task: {new_task.id})"
+                        )
 
         return counter

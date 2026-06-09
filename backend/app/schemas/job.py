@@ -31,7 +31,8 @@ class JobBase(BaseModel):
     enabled: bool = True
     concurrency_policy: ConcurrencyPolicy = "allow"
     max_retries: int = Field(default=0, ge=0)
-    next_job_id: UUID | None = None
+    upstream_job_ids: list[UUID] = Field(default_factory=list)
+    downstream_job_ids: list[UUID] = Field(default_factory=list)
 
     @field_validator("action_config")
     @classmethod
@@ -58,7 +59,8 @@ class JobUpdate(BaseModel):
     enabled: bool | None = None
     concurrency_policy: ConcurrencyPolicy | None = None
     max_retries: int | None = Field(default=None, ge=0)
-    next_job_id: UUID | None = None
+    upstream_job_ids: list[UUID] | None = None
+    downstream_job_ids: list[UUID] | None = None
 
 
 class JobRead(JobBase):
@@ -82,7 +84,8 @@ class JobListItem(BaseModel):
     next_fire_at: datetime | None = None  # normal job 無下次執行時間
     created_at: datetime
     updated_at: datetime
-    next_job_id: UUID | None = None
+    upstream_job_ids: list[UUID] = Field(default_factory=list)
+    downstream_job_ids: list[UUID] = Field(default_factory=list)
 
 
 class JobListResponse(BaseModel):

@@ -114,18 +114,34 @@ class JobService:
             action_type=payload.action_type,
             action_config=payload.action_config,
             # S4: 同時填 runtime_spec 給 worker 直接吃
-            runtime_spec=_build_runtime_spec(payload.action_type, payload.action_config),
+            runtime_spec=_build_runtime_spec(
+                payload.action_type, payload.action_config
+            ),
             enabled=payload.enabled,
             concurrency_policy=payload.concurrency_policy,
             max_retries=payload.max_retries,
             next_fire_at=next_fire_at,
         )
 
+        # 處理 DAG 關聯
+        if payload.upstream_job_ids:
+            upstreams = (
+                self.db.query(Job).filter(Job.id.in_(payload.upstream_job_ids)).all()
+            )
+            job.upstream_jobs.extend(upstreams)
+
+        if payload.downstream_job_ids:
+            downstreams = (
+                self.db.query(Job).filter(Job.id.in_(payload.downstream_job_ids)).all()
+            )
+            job.downstream_jobs.extend(downstreams)
+
         job = self.jobs.create(job)
 
-        if job.job_type == "normal" and job.enabled:
+        # 建立普通的單次任務 (normal job) 時，如果它沒有任何上游依賴，就直接發射它
+        if job.job_type == "normal" and job.enabled and not job.upstream_jobs:
             task = Task(
-                job_id=job.id,
+                job_id=str(job.id),
                 status="pending",
                 trigger_type="scheduled",
                 retry_count=0,
@@ -208,14 +224,26 @@ class JobService:
         elif action_type == "shell":
             ShellActionConfig.model_validate(action_config)
         for key, value in data.items():
-            setattr(job, key, value)
-
+            if key not in ("upstream_job_ids", "downstream_job_ids"):
+                setattr(job, key, value)
         if "cron_expression" in data:
             job.cron_expression = normalized_cron_expression
 
         # S4: action_type / action_config 任何一個動過都要同步 runtime_spec。
         if "action_type" in data or "action_config" in data:
             job.runtime_spec = _build_runtime_spec(action_type, action_config)
+
+        if payload.upstream_job_ids is not None:
+            upstreams = (
+                self.db.query(Job).filter(Job.id.in_(payload.upstream_job_ids)).all()
+            )
+            job.upstream_jobs = upstreams
+
+        if payload.downstream_job_ids is not None:
+            downstreams = (
+                self.db.query(Job).filter(Job.id.in_(payload.downstream_job_ids)).all()
+            )
+            job.downstream_jobs = downstreams
 
         return self.jobs.update(job)
 

@@ -5,17 +5,37 @@ from uuid import uuid4
 
 from sqlalchemy import (
     Boolean,
+    Column,
     DateTime,
     Integer,
     String,
     UniqueConstraint,
     func,
     ForeignKey,
+    Table,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.types import GUID, JSONBCompat
+
+
+job_dependencies = Table(
+    "job_dependencies",
+    Base.metadata,
+    Column(
+        "upstream_job_id",
+        GUID(),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "downstream_job_id",
+        GUID(),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
 
 
 class Job(Base):
@@ -52,6 +72,27 @@ class Job(Base):
 
     tasks = relationship("Task", back_populates="job", cascade="all, delete-orphan")
 
-    next_job_id: Mapped[str | None] = mapped_column(
-        GUID(), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True
+    # 定義「下游任務」 (這個 Job 跑完後，可能要觸發誰)
+    downstream_jobs = relationship(
+        "Job",
+        secondary=job_dependencies,
+        primaryjoin="Job.id == job_dependencies.c.upstream_job_id",
+        secondaryjoin="Job.id == job_dependencies.c.downstream_job_id",
+        back_populates="upstream_jobs",
     )
+    # 定義「上游任務」 (這個 Job 要等哪些任務跑完)
+    upstream_jobs = relationship(
+        "Job",
+        secondary=job_dependencies,
+        primaryjoin="Job.id == job_dependencies.c.downstream_job_id",
+        secondaryjoin="Job.id == job_dependencies.c.upstream_job_id",
+        back_populates="downstream_jobs",
+    )
+
+    @property
+    def upstream_job_ids(self) -> list[str]:
+        return [str(job.id) for job in self.upstream_jobs]
+
+    @property
+    def downstream_job_ids(self) -> list[str]:
+        return [str(job.id) for job in self.downstream_jobs]

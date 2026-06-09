@@ -154,7 +154,7 @@ class TestSchedulerService:
         assert queue._queue.empty()
 
     def test_trigger_dependent_jobs(self, db_session):
-        """Scheduler 應該能偵測剛成功的 Task，並觸發其設定的 next_job_id。"""
+        """Scheduler 應該能偵測剛成功的 Task，並觸發其相依的下游 Job (downstream_jobs)。"""
         queue = MemoryQueueClient()
         factory = sessionmaker(bind=db_session.get_bind())
         service = SchedulerService(factory, queue)
@@ -162,9 +162,9 @@ class TestSchedulerService:
         # 1. 建立下游 Job B
         job_b = _job(db_session, name="Job B")
 
-        # 2. 建立上游 Job A，並把 next_job_id 指向 Job B
+        # 2. 建立上游 Job A，並把 Job B 加入其下游任務清單
         job_a = _job(db_session, name="Job A")
-        job_a.next_job_id = str(job_b.id)
+        job_a.downstream_jobs.append(job_b)
         db_session.commit()
 
         # 3. 模擬 Worker 剛完成 Job A，建立一筆成功的 Task
