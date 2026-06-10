@@ -110,6 +110,9 @@ export default function JobsListPage() {
             onNext={() =>
               setPage(current => Math.min(current + 1, Math.max(totalPages, 1)))
             }
+            onPageChange={value =>
+              setPage(Math.min(Math.max(value, 1), Math.max(totalPages, 1)))
+            }
             onPrevious={() => setPage(current => Math.max(current - 1, 1))}
             page={page}
             total={total}
