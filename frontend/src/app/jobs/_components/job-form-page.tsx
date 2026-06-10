@@ -10,7 +10,10 @@ import { api } from "../../../api/client"
 import { useToast } from "../../../hooks/use-toast"
 import type { ActionType, ConcurrencyPolicy, Job } from "../../../types"
 import { normalizeCronExpression } from "../_lib/job-form.utils"
-import { JobDependencyCombobox } from "./job-dependency-combobox"
+import {
+  JOB_DEPENDENCY_COMBOBOX_MAX_CANDIDATES,
+  JobDependencyCombobox,
+} from "./job-dependency-combobox"
 
 type JobFormState = {
   name: string
@@ -221,7 +224,7 @@ export default function JobFormPage() {
     queryFn: () =>
       api.listJobs({
         page: 1,
-        page_size: 100,
+        page_size: JOB_DEPENDENCY_COMBOBOX_MAX_CANDIDATES,
       }),
   })
 
@@ -514,6 +517,7 @@ export default function JobFormPage() {
           description="Pick upstream jobs by name. Their IDs are shown so you can confirm the dependency target before saving."
           error={errors.upstream_job_ids}
           isLoading={jobsQuery.isLoading}
+          maxCandidates={JOB_DEPENDENCY_COMBOBOX_MAX_CANDIDATES}
           label="Upstream dependencies"
           onChange={upstream_job_ids =>
             setForm(current => ({

@@ -4,6 +4,8 @@ import { useMemo, useState } from "react"
 
 import type { Job } from "../../../types"
 
+export const JOB_DEPENDENCY_COMBOBOX_MAX_CANDIDATES = 50
+
 type JobDependencyComboboxProps = {
   description: string
   error?: string
@@ -11,6 +13,7 @@ type JobDependencyComboboxProps = {
   loadingLabel?: string
   label: string
   options: Job[]
+  maxCandidates?: number
   selectedIds: string[]
   currentJobId?: string
   onChange: (selectedIds: string[]) => void
@@ -23,11 +26,13 @@ export function JobDependencyCombobox({
   loadingLabel = "Loading jobs...",
   label,
   options,
+  maxCandidates = JOB_DEPENDENCY_COMBOBOX_MAX_CANDIDATES,
   selectedIds,
   currentJobId,
   onChange,
 }: JobDependencyComboboxProps) {
   const [query, setQuery] = useState("")
+  const effectiveMaxCandidates = Math.max(1, maxCandidates)
 
   const optionMap = useMemo(
     () => new Map(options.map(job => [job.id, job])),
@@ -56,6 +61,9 @@ export function JobDependencyCombobox({
       })
       .sort((left, right) => left.name.localeCompare(right.name))
   }, [currentJobId, options, query, selectedIds])
+
+  const visibleOptions = filteredOptions.slice(0, effectiveMaxCandidates)
+  const hasMoreMatches = filteredOptions.length > visibleOptions.length
 
   const addJob = (jobId: string) => {
     onChange([...selectedIds, jobId])
@@ -120,13 +128,16 @@ export function JobDependencyCombobox({
           <p className="text-xs uppercase tracking-[0.24em] text-muted">
             Available jobs
           </p>
-          <p className="text-xs text-muted">{filteredOptions.length} results</p>
+          <p className="text-xs text-muted">
+            {visibleOptions.length} results
+            {hasMoreMatches ? ` of ${filteredOptions.length}` : ""}
+          </p>
         </div>
         <div className="max-h-64 space-y-2 overflow-auto pr-1">
           {isLoading ? (
             <p className="px-1 py-3 text-sm text-muted">{loadingLabel}</p>
-          ) : filteredOptions.length > 0 ? (
-            filteredOptions.map(job => (
+          ) : visibleOptions.length > 0 ? (
+            visibleOptions.map(job => (
               <button
                 className="flex w-full flex-col gap-1 rounded-2xl border border-line bg-panel-strong px-4 py-3 text-left transition hover:border-accent/40 hover:bg-panel"
                 key={job.id}
@@ -147,6 +158,11 @@ export function JobDependencyCombobox({
             </p>
           )}
         </div>
+        {hasMoreMatches ? (
+          <p className="mt-2 px-1 text-xs text-muted">
+            Showing the first {effectiveMaxCandidates} matching jobs.
+          </p>
+        ) : null}
       </div>
 
       {error ? <p className="text-xs text-danger">{error}</p> : null}
