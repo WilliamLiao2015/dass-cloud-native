@@ -178,6 +178,40 @@ def test_update_job_can_clear_cron_expression(client, db_session):
     assert job.next_fire_at is None
 
 
+def test_enabling_disabled_one_time_job_triggers_it(client, db_session):
+    create_response = client.post(
+        "/api/v1/jobs",
+        json={
+            "name": "disabled-one-time-job",
+            "cron_expression": None,
+            "action_type": "shell",
+            "action_config": {"command": "echo hi", "timeout_seconds": 5},
+            "enabled": False,
+            "concurrency_policy": "allow",
+            "max_retries": 0,
+        },
+    )
+    assert create_response.status_code == 200
+    job_id = create_response.json()["id"]
+
+    update_response = client.put(
+        f"/api/v1/jobs/{job_id}",
+        json={"enabled": True},
+    )
+    assert update_response.status_code == 200
+    body = update_response.json()
+    assert body["enabled"] is True
+
+    job = db_session.query(Job).filter_by(id=job_id).one()
+    tasks = db_session.query(Task).filter_by(job_id=job.id).all()
+    assert len(tasks) == 1
+    assert tasks[0].status == "pending"
+    assert tasks[0].trigger_type == "scheduled"
+
+    messages = client.app.state.normal_queue_client.receive_tasks(max_messages=1, wait_time_seconds=0)
+    assert len(messages) == 1
+
+
 def test_get_task_details(client, db_session):
     job = Job(
         name="task-detail-job",
