@@ -1,23 +1,23 @@
 "use client"
 
-import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
 import {
   Background,
   BackgroundVariant,
   Controls,
+  type Edge,
   Handle,
   MarkerType,
+  type Node,
+  type NodeProps,
   Position,
   ReactFlow,
   type ReactFlowInstance,
-  type Edge,
-  type Node,
-  type NodeProps,
 } from "@xyflow/react"
+import Link from "next/link"
+import { useEffect, useMemo, useState } from "react"
 
-import { useTheme } from "../../providers"
 import type { Job } from "../../../types"
+import { useTheme } from "../../providers"
 
 type GraphNodeKind = "current" | "upstream" | "downstream"
 
@@ -128,8 +128,10 @@ export function JobDependencyGraph({
   hasError: boolean
 }) {
   const { theme } = useTheme()
-  const [reactFlowInstance, setReactFlowInstance] =
-    useState<ReactFlowInstance<JobFlowNode, Edge> | null>(null)
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<
+    JobFlowNode,
+    Edge
+  > | null>(null)
   const [selectedId, setSelectedId] = useState(job.id)
 
   useEffect(() => {
@@ -157,7 +159,8 @@ export function JobDependencyGraph({
     const canvasHeight = Math.max(420, 180 + (maxSiblings - 1) * rowSpacing)
     const rootY = canvasHeight / 2
     const upstreamStart = rootY - ((upstreamIds.length - 1) * rowSpacing) / 2
-    const downstreamStart = rootY - ((downstreamIds.length - 1) * rowSpacing) / 2
+    const downstreamStart =
+      rootY - ((downstreamIds.length - 1) * rowSpacing) / 2
 
     const nodes: JobFlowNode[] = [
       ...upstreamIds.map((upstreamId, index) => {
@@ -185,11 +188,11 @@ export function JobDependencyGraph({
           y: rootY,
         },
         selected: selectedId === job.id,
-          data: {
-            kind: "current",
-            label: job.name,
-            secondaryLabel: job.id,
-          },
+        data: {
+          kind: "current",
+          label: job.name,
+          secondaryLabel: job.id,
+        },
       } satisfies JobFlowNode,
       ...downstreamIds.map((downstreamId, index) => {
         const relatedJob = jobMap.get(downstreamId)
@@ -264,8 +267,7 @@ export function JobDependencyGraph({
     }
   }, [job, jobMap, selectedId])
 
-  const selectedJob =
-    selectedId === job.id ? job : jobMap.get(selectedId)
+  const selectedJob = selectedId === job.id ? job : jobMap.get(selectedId)
   const selectedKind =
     selectedId === job.id
       ? "current"
