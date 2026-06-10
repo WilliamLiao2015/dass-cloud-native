@@ -1,4 +1,10 @@
-import type { Job, JobListParams, JobListResponse, Task } from "../types"
+import type {
+  Job,
+  JobListParams,
+  JobListResponse,
+  JobWritePayload,
+  Task,
+} from "../types"
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const requestHeaders = Object.fromEntries(
@@ -56,12 +62,12 @@ export const api = {
       })
     ),
   getJob: (id: string) => request<Job>(`/api/v1/jobs/${id}`),
-  createJob: (payload: unknown) =>
+  createJob: (payload: JobWritePayload) =>
     request<Job>("/api/v1/jobs", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  updateJob: (id: string, payload: unknown) =>
+  updateJob: (id: string, payload: JobWritePayload) =>
     request<Job>(`/api/v1/jobs/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),

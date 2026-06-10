@@ -19,6 +19,19 @@ export interface Job {
   next_fire_at: string | null
   created_at: string
   updated_at: string
+  upstream_job_ids: string[]
+  downstream_job_ids: string[]
+}
+
+export interface JobWritePayload {
+  name: string
+  cron_expression: string | null
+  action_type: ActionType
+  action_config: Record<string, unknown>
+  enabled: boolean
+  concurrency_policy: ConcurrencyPolicy
+  max_retries: number
+  upstream_job_ids: string[]
 }
 
 export interface JobListResponse {

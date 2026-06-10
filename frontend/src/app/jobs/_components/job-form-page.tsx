@@ -10,6 +10,7 @@ import { api } from "../../../api/client"
 import { useToast } from "../../../hooks/use-toast"
 import type { ActionType, ConcurrencyPolicy, Job } from "../../../types"
 import { normalizeCronExpression } from "../_lib/job-form.utils"
+import { JobDependencyCombobox } from "./job-dependency-combobox"
 
 type JobFormState = {
   name: string
@@ -18,6 +19,7 @@ type JobFormState = {
   enabled: boolean
   concurrency_policy: ConcurrencyPolicy
   max_retries: string
+  upstream_job_ids: string[]
   http: {
     method: string
     url: string
@@ -54,6 +56,7 @@ function createDefaultFormState(): JobFormState {
     enabled: true,
     concurrency_policy: "allow",
     max_retries: "0",
+    upstream_job_ids: [],
     http: { ...defaultHttpState },
     shell: { ...defaultShellState },
   }
@@ -81,6 +84,7 @@ function toFormState(job: Job): JobFormState {
     enabled: job.enabled,
     concurrency_policy: job.concurrency_policy,
     max_retries: String(job.max_retries ?? 0),
+    upstream_job_ids: job.upstream_job_ids ?? [],
     http: {
       method: String(actionConfig.method ?? "GET"),
       url: String(actionConfig.url ?? ""),
@@ -137,7 +141,7 @@ function parseBody(value: string, errors: JobFormErrors) {
   }
 }
 
-function validateForm(form: JobFormState) {
+function validateForm(form: JobFormState, currentJobId?: string) {
   const errors: JobFormErrors = {}
 
   if (!form.name.trim()) {
@@ -147,6 +151,11 @@ function validateForm(form: JobFormState) {
   const maxRetries = Number.parseInt(form.max_retries, 10)
   if (!Number.isInteger(maxRetries) || maxRetries < 0) {
     errors.max_retries = "Max retries must be a non-negative integer."
+  }
+
+  if (currentJobId && form.upstream_job_ids.includes(currentJobId)) {
+    errors.upstream_job_ids = "A job cannot depend on itself."
+    return errors
   }
 
   if (form.action_type === "http") {
@@ -207,6 +216,15 @@ export default function JobFormPage() {
     enabled: isEditing,
   })
 
+  const jobsQuery = useQuery({
+    queryKey: ["jobs", "dependency-picker"],
+    queryFn: () =>
+      api.listJobs({
+        page: 1,
+        page_size: 100,
+      }),
+  })
+
   const [form, setForm] = useState<JobFormState>(() => createDefaultFormState())
   const [errors, setErrors] = useState<JobFormErrors>({})
   const [submitError, setSubmitError] = useState("")
@@ -219,7 +237,7 @@ export default function JobFormPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const validationErrors = validateForm(form)
+      const validationErrors = validateForm(form, jobId || undefined)
       if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors)
         throw new Error("Please fix the highlighted fields.")
@@ -227,6 +245,7 @@ export default function JobFormPage() {
 
       const maxRetries = Number.parseInt(form.max_retries, 10)
       const cronExpression = normalizeCronExpression(form.cron_expression)
+      const upstreamJobIds = form.upstream_job_ids
 
       if (form.action_type === "http") {
         const actionErrors: JobFormErrors = {}
@@ -259,6 +278,7 @@ export default function JobFormPage() {
           enabled: form.enabled,
           concurrency_policy: form.concurrency_policy,
           max_retries: Number.isFinite(maxRetries) ? maxRetries : 0,
+          upstream_job_ids: upstreamJobIds,
         }
 
         return isEditing
@@ -277,6 +297,7 @@ export default function JobFormPage() {
         enabled: form.enabled,
         concurrency_policy: form.concurrency_policy,
         max_retries: Number.isFinite(maxRetries) ? maxRetries : 0,
+        upstream_job_ids: upstreamJobIds,
       }
 
       return isEditing ? api.updateJob(jobId, payload) : api.createJob(payload)
@@ -373,8 +394,9 @@ export default function JobFormPage() {
         <div>
           <h2 className="text-3xl font-semibold text-fg">{actionTitle}</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Define the schedule, action payload, and retry behavior. Validation
-            runs in the browser before the job is submitted to the API.
+            Define the schedule, upstream dependencies, action payload, and retry
+            behavior. Validation runs in the browser before the job is
+            submitted to the API.
           </p>
         </div>
       </div>
@@ -486,6 +508,22 @@ export default function JobFormPage() {
             <span>Enabled</span>
           </label>
         </div>
+
+        <JobDependencyCombobox
+          currentJobId={jobId || undefined}
+          description="Pick upstream jobs by name. Their IDs are shown so you can confirm the dependency target before saving."
+          error={errors.upstream_job_ids}
+          isLoading={jobsQuery.isLoading}
+          label="Upstream dependencies"
+          onChange={upstream_job_ids =>
+            setForm(current => ({
+              ...current,
+              upstream_job_ids,
+            }))
+          }
+          options={jobsQuery.data?.items ?? []}
+          selectedIds={form.upstream_job_ids}
+        />
 
         {form.action_type === "http" ? (
           <section className="space-y-4 rounded-3xl border border-line bg-panel-strong/50 p-5">

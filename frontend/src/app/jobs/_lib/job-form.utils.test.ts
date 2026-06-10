@@ -12,4 +12,3 @@ describe("normalizeCronExpression", () => {
     expect(normalizeCronExpression("  */5 * * * *  ")).toBe("*/5 * * * *")
   })
 })
-

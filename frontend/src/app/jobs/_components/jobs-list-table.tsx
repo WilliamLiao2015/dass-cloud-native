@@ -85,6 +85,9 @@ export function JobsListTable({ jobs }: { jobs: Job[] }) {
                   <div className="mt-1 max-w-xs wrap-break-words text-xs text-muted">
                     {formatActionConfig(job)}
                   </div>
+                  <div className="mt-2 text-xs text-muted">
+                    Upstream dependencies: {job.upstream_job_ids.length}
+                  </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-muted">
                   <JobBadge enabled={job.enabled} />

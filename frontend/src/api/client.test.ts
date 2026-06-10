@@ -88,13 +88,37 @@ describe("api", () => {
     }))
     vi.stubGlobal("fetch", fetchMock)
 
-    await api.createJob({ name: "job-a" })
+    await api.createJob({
+      name: "job-a",
+      cron_expression: null,
+      action_type: "shell",
+      action_config: {
+        command: "echo hello",
+        timeout_seconds: 30,
+      },
+      enabled: true,
+      concurrency_policy: "allow",
+      max_retries: 0,
+      upstream_job_ids: [],
+    })
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/jobs",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ name: "job-a" }),
+        body: JSON.stringify({
+          name: "job-a",
+          cron_expression: null,
+          action_type: "shell",
+          action_config: {
+            command: "echo hello",
+            timeout_seconds: 30,
+          },
+          enabled: true,
+          concurrency_policy: "allow",
+          max_retries: 0,
+          upstream_job_ids: [],
+        }),
         headers: expect.objectContaining({
           "Content-Type": "application/json",
         }),

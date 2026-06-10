@@ -59,6 +59,7 @@ export function JobDetailContent({
         cronExpression={job.cron_expression}
         maxRetries={job.max_retries}
         nextFireAt={job.next_fire_at}
+        upstreamJobIds={job.upstream_job_ids}
         tasksCount={tasks.length}
         updatedAt={job.updated_at}
       />
