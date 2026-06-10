@@ -50,7 +50,10 @@ export function TaskDetailHeader({
           <p className="text-xs uppercase tracking-[0.35em] text-accent">
             Task Detail
           </p>
-          <DetailBadge label={status.replace(/_/g, " ")} tone={getTaskStatusTone(status)} />
+          <DetailBadge
+            label={status.replace(/_/g, " ")}
+            tone={getTaskStatusTone(status)}
+          />
         </div>
         <div>
           <h2 className="text-3xl font-semibold text-fg">Execution {taskId}</h2>

@@ -1,13 +1,7 @@
 "use client"
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 
 import { ToastProvider } from "../hooks/use-toast"
@@ -92,12 +86,12 @@ function ThemeProvider({ children }: { children: ReactNode }) {
       theme,
       setTheme: setThemeState,
       toggleTheme: () => {
-        setThemeState((currentTheme) =>
-          currentTheme === "dark" ? "light" : "dark",
+        setThemeState(currentTheme =>
+          currentTheme === "dark" ? "light" : "dark"
         )
       },
     }),
-    [theme],
+    [theme]
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

@@ -1,9 +1,6 @@
 "use client"
 
-import {
-  formatCronExpression,
-  formatDateTime,
-} from "../_lib/jobs-list.utils"
+import { formatCronExpression, formatDateTime } from "../_lib/jobs-list.utils"
 
 function formatActionConfig(actionConfig: Record<string, unknown>) {
   const entries = Object.entries(actionConfig ?? {})

@@ -19,7 +19,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const isActive = (path: string) =>
     pathname === path || pathname?.startsWith(`${path}/`)
 
-  const themeLabel = mounted ? (theme === "dark" ? "Light mode" : "Dark mode") : "Theme"
+  const themeLabel = mounted
+    ? theme === "dark"
+      ? "Light mode"
+      : "Dark mode"
+    : "Theme"
 
   return (
     <div className="min-h-full text-fg">

@@ -394,8 +394,8 @@ export default function JobFormPage() {
         <div>
           <h2 className="text-3xl font-semibold text-fg">{actionTitle}</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Define the schedule, upstream dependencies, action payload, and retry
-            behavior. Validation runs in the browser before the job is
+            Define the schedule, upstream dependencies, action payload, and
+            retry behavior. Validation runs in the browser before the job is
             submitted to the API.
           </p>
         </div>

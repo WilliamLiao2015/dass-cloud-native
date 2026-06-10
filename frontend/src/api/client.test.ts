@@ -178,6 +178,9 @@ describe("api", () => {
 
     await api.getTask("task-1")
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/v1/tasks/task-1", expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tasks/task-1",
+      expect.any(Object)
+    )
   })
 })

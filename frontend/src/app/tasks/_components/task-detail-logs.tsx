@@ -35,8 +35,14 @@ export function TaskDetailLogs({
         </p>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <LogPanel content={stdout} title="Stdout" />
-        <LogPanel content={stderr} title="Stderr" />
+        <LogPanel
+          content={stdout}
+          title="Stdout"
+        />
+        <LogPanel
+          content={stderr}
+          title="Stderr"
+        />
       </div>
     </section>
   )

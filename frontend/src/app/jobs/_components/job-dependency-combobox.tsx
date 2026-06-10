@@ -133,7 +133,9 @@ export function JobDependencyCombobox({
                 onClick={() => addJob(job.id)}
                 type="button"
               >
-                <span className="text-sm font-semibold text-fg">{job.name}</span>
+                <span className="text-sm font-semibold text-fg">
+                  {job.name}
+                </span>
                 <span className="font-mono text-xs text-muted">{job.id}</span>
               </button>
             ))

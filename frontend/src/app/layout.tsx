@@ -13,9 +13,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+    >
       <head>
-        <Script id="theme-init" strategy="beforeInteractive">{`
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+        >{`
           (() => {
             try {
               const storedTheme = window.localStorage.getItem("dass-theme")
