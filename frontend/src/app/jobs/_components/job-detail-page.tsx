@@ -6,8 +6,17 @@ import { JobDetailError } from "./job-detail-error"
 import { JobDetailLoading } from "./job-detail-loading"
 
 export default function JobDetailPage({ jobId }: { jobId: string }) {
-  const { deleteMutation, job, jobQuery, tasks, tasksQuery, triggerMutation } =
-    useJobDetailPage(jobId)
+  const {
+    deleteMutation,
+    job,
+    jobQuery,
+    relatedJobs,
+    relatedJobsError,
+    relatedJobsFetching,
+    tasks,
+    tasksQuery,
+    triggerMutation,
+  } = useJobDetailPage(jobId)
 
   if (jobQuery.isLoading) {
     return <JobDetailLoading />
@@ -50,6 +59,9 @@ export default function JobDetailPage({ jobId }: { jobId: string }) {
       }
       tasksFetching={tasksQuery.isFetching}
       tasksLoading={tasksQuery.isLoading}
+      relatedJobs={relatedJobs}
+      relatedJobsError={relatedJobsError}
+      relatedJobsFetching={relatedJobsFetching}
     />
   )
 }

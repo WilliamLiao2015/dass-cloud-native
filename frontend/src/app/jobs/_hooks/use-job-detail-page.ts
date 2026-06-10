@@ -1,10 +1,16 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
 import { api } from "../../../api/client"
 import { useToast } from "../../../hooks/use-toast"
+import type { Job } from "../../../types"
 
 export function useJobDetailPage(jobId: string) {
   const router = useRouter()
@@ -19,6 +25,24 @@ export function useJobDetailPage(jobId: string) {
   const tasksQuery = useQuery({
     queryKey: ["job-tasks", jobId],
     queryFn: () => api.listJobTasks(jobId),
+  })
+
+  const relatedJobIds = jobQuery.data
+    ? Array.from(
+        new Set([
+          ...jobQuery.data.upstream_job_ids,
+          ...jobQuery.data.downstream_job_ids,
+        ])
+      ).filter(relatedJobId => relatedJobId !== jobId)
+    : []
+
+  const relatedJobQueries = useQueries({
+    queries: relatedJobIds.map(relatedJobId => ({
+      queryKey: ["job", relatedJobId],
+      queryFn: () => api.getJob(relatedJobId),
+      enabled: Boolean(relatedJobId),
+      staleTime: 5 * 60 * 1000,
+    })),
   })
 
   const triggerMutation = useMutation({
@@ -66,6 +90,11 @@ export function useJobDetailPage(jobId: string) {
     deleteMutation,
     job: jobQuery.data,
     jobQuery,
+    relatedJobs: relatedJobQueries
+      .map(query => query.data)
+      .filter((job): job is Job => Boolean(job)),
+    relatedJobsError: relatedJobQueries.some(query => query.isError),
+    relatedJobsFetching: relatedJobQueries.some(query => query.isFetching),
     tasks: tasksQuery.data ?? [],
     tasksQuery,
     triggerMutation,

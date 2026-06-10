@@ -1,6 +1,7 @@
 "use client"
 
 import type { Job } from "../../../types"
+import { JobDependencyGraph } from "./job-dependency-graph"
 import { JobDetailHeader } from "./job-detail-header"
 import { JobDetailOverview } from "./job-detail-overview"
 import { JobTaskList } from "./job-task-list"
@@ -17,6 +18,9 @@ export function JobDetailContent({
   isDeleting,
   isTriggering,
   isTasksError,
+  relatedJobs,
+  relatedJobsError,
+  relatedJobsFetching,
 }: {
   job: Job
   tasks: Array<{
@@ -38,6 +42,9 @@ export function JobDetailContent({
   isDeleting: boolean
   isTriggering: boolean
   isTasksError: boolean
+  relatedJobs: Job[]
+  relatedJobsError: boolean
+  relatedJobsFetching: boolean
 }) {
   return (
     <div className="space-y-6 rounded-3xl border border-line bg-panel p-6 shadow-glow backdrop-blur-sm sm:p-8">
@@ -62,6 +69,13 @@ export function JobDetailContent({
         upstreamJobIds={job.upstream_job_ids}
         tasksCount={tasks.length}
         updatedAt={job.updated_at}
+      />
+
+      <JobDependencyGraph
+        hasError={relatedJobsError}
+        isLoading={relatedJobsFetching}
+        job={job}
+        relatedJobs={relatedJobs}
       />
 
       <JobTaskList
